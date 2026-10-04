@@ -1,0 +1,21 @@
+# PostgreSQL local para desenvolvimento e para os testes de integração.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: expresso
+      POSTGRES_PASSWORD: expresso
+      POSTGRES_DB: expresso
+    ports:
+      - "5432:5432"
+    volumes:
+      - dados:/var/lib/postgresql/data
+      - ./docker/criar-banco-de-teste.sql:/docker-entrypoint-initdb.d/criar-banco-de-teste.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U expresso"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  dados:
