@@ -6,10 +6,10 @@ import cookieParser from 'cookie-parser';
  * Em produção só ORIGEM_APP é aceita. Fora dela qualquer origem é aceita, para testar
  * no celular pelo IP do computador (ex.: http://192.168.0.10:3000).
  */
-export function prepararHttp(app: NestExpressApplication, origens: string, producao = true) {
+export function prepararHttp(app: NestExpressApplication, origens: string, producao = true, proxies = 1) {
   app.use(cookieParser());
   app.enableCors({ origin: producao ? origens.split(',').map((o) => o.trim()) : true, credentials: true });
-  app.set('trust proxy', 1);
+  app.set('trust proxy', proxies);
   app.enableShutdownHooks();
   return app;
 }

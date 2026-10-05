@@ -12,6 +12,8 @@ const esquema = z.object({
   SESSAO_SEGREDO: z.string().min(32),
   SESSAO_DIAS: z.coerce.number().int().positive().default(30),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  /** Quantos proxies há na frente da API (Railway = 1; Vercel + Railway = 2). Serve para achar o IP de quem tenta entrar. */
+  PROXIES_NA_FRENTE: z.coerce.number().int().min(0).default(1),
 });
 
 export type Env = z.infer<typeof esquema>;

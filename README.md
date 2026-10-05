@@ -63,6 +63,9 @@ src/
 
 ## Produção
 
+Passo a passo para Railway (API e banco) e Vercel (app) em [PUBLICAR.md](PUBLICAR.md). A imagem Docker (`Dockerfile`) roda em qualquer lugar.
+
+
 - Hospede app e API no mesmo domínio (`app.seudominio.com` e `api.seudominio.com`) e use `COOKIE_DOMINIO=.seudominio.com`, para o `proxy.ts` do Next enxergar o cookie de sessão.
 - `ORIGEM_APP` libera o CORS (com credenciais) só para o app.
 - Os eventos em tempo real ficam na memória do processo: com mais de uma instância da API, troque o `PublicadorSSE` por Postgres `LISTEN/NOTIFY` ou Redis.

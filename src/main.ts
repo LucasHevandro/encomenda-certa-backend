@@ -13,7 +13,7 @@ async function bootstrap() {
   // Um serviço só: aplicar as migrações na subida é simples e seguro.
   await migrar(uow.db);
   const app = await NestFactory.create<NestExpressApplication>(AppModule.configurar(env, uow));
-  prepararHttp(app, env.ORIGEM_APP, env.NODE_ENV === 'production');
+  prepararHttp(app, env.ORIGEM_APP, env.NODE_ENV === 'production', env.PROXIES_NA_FRENTE);
   await app.listen(env.PORT);
 }
 await bootstrap();
