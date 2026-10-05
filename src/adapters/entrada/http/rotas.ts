@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Res, Sse } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Res, Sse } from '@nestjs/common';
 import type { Response } from 'express';
 import { interval, map, merge, type Observable } from 'rxjs';
 import { Acesso, Clientes, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
@@ -120,6 +120,9 @@ export class DiasRotas {
 
   /** Tempo real: os aparelhos recebem os números novos sem recarregar. Um comentário a cada 25s mantém a conexão. */
   @Sse(':id/eventos')
+  // Sem compressão nem buffer no caminho (proxy do Next, Nginx): cada evento sai na hora.
+  @Header('Cache-Control', 'no-cache, no-transform')
+  @Header('X-Accel-Buffering', 'no')
   eventosDoDia(@Param('id') id: string): Observable<MessageEvent> {
     return merge(
       this.eventos.doDia(id).pipe(map((evento): MessageEvent => ({ type: evento.tipo, data: evento }))),
