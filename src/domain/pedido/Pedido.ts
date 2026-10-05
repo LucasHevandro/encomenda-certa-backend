@@ -27,6 +27,17 @@ export interface Pedido {
   /** Retirada e pagamento são independentes (os dois selos do pedido). */
   readonly retirada: Retirada;
   readonly pagamento: Pagamento;
+  /** Quem fez cada passo e quando (nome da pessoa e data ISO). */
+  readonly registro?: RegistroDoPedido;
+}
+
+export interface RegistroDoPedido {
+  readonly reservadoPor?: string;
+  readonly reservadoEm?: string;
+  readonly retiradoPor?: string;
+  readonly retiradoEm?: string;
+  readonly canceladoPor?: string;
+  readonly canceladoEm?: string;
 }
 
 export function totalDoItem(item: ItemPedido): Dinheiro {

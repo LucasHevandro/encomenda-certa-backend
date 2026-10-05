@@ -150,6 +150,27 @@ export class Pedidos {
     return salvo;
   }
 
+  /**
+   * Reativar um pedido cancelado: volta a segurar unidades, então passa pela mesma trava e
+   * conferência da reserva. Se não couber mais, QuantidadeIndisponivel com o máximo.
+   */
+  async reativar(pedidoId: string, usuarioId: string): Promise<Pedido> {
+    const salvo = await this.uow.executar(async (r) => {
+      const atual = existir(await r.pedidos.travar(pedidoId), 'Pedido');
+      if (atual.retirada !== 'cancelado') throw new ErroDeDominio('pedido-nao-cancelado', 'Só dá para reativar pedido cancelado.');
+      garantirAberto(await r.dias.travarParaEscrita(atual.diaId));
+      const estoques = await r.producao.travar(
+        atual.diaId,
+        atual.itens.map((i) => i.produtoId),
+      );
+      verificarItens(estoques, atual.itens);
+      await r.pedidos.mudarRetirada(pedidoId, 'reservado', usuarioId, this.relogio.agora());
+      return existir(await r.pedidos.obter(pedidoId), 'Pedido');
+    });
+    this.eventos.publicar(salvo.diaId, { tipo: 'disponibilidade-mudou' });
+    return salvo;
+  }
+
   /** Cancelar só libera unidades, então não precisa checar disponibilidade; avisa a lista de espera. */
   async cancelar(pedidoId: string, usuarioId: string): Promise<ResultadoCancelamento> {
     const { pedido, resultado } = await this.uow.executar(async (r) => {

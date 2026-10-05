@@ -14,6 +14,8 @@ const STATUS: Record<string, number> = {
   'email-ja-existe': 409,
   'pedido-fechado': 409,
   'dia-encerrado': 409,
+  'pedido-nao-cancelado': 409,
+  'senha-atual-incorreta': 422,
 };
 
 /**

@@ -49,6 +49,21 @@ class UsuariosPg implements UsuarioRepo {
     const [u] = await this.db.insert(t.usuario).values(usuario).returning();
     return { id: u.id, nome: u.nome, email: u.email };
   }
+
+  async listar(): Promise<Usuario[]> {
+    const linhas = await this.db.select({ id: t.usuario.id, nome: t.usuario.nome, email: t.usuario.email }).from(t.usuario).orderBy(asc(t.usuario.nome));
+    return linhas;
+  }
+
+  async senhaHash(id: string): Promise<string | null> {
+    if (!ehUuid(id)) return null;
+    const [u] = await this.db.select({ senhaHash: t.usuario.senhaHash }).from(t.usuario).where(eq(t.usuario.id, id));
+    return u?.senhaHash ?? null;
+  }
+
+  async mudarSenha(id: string, senhaHash: string): Promise<void> {
+    await this.db.update(t.usuario).set({ senhaHash }).where(eq(t.usuario.id, id));
+  }
 }
 
 class ProdutosPg implements ProdutoRepo {
@@ -263,8 +278,13 @@ class PedidosPg implements PedidoRepo {
   }
 
   async mudarRetirada(id: string, retirada: Retirada, usuarioId: string, em: Date) {
+    // Voltar para "reservado" (reativar) apaga o registro do cancelamento.
     const quem =
-      retirada === 'retirado' ? { retiradoPor: usuarioId, retiradoEm: em } : retirada === 'cancelado' ? { canceladoPor: usuarioId, canceladoEm: em } : {};
+      retirada === 'retirado'
+        ? { retiradoPor: usuarioId, retiradoEm: em }
+        : retirada === 'cancelado'
+          ? { canceladoPor: usuarioId, canceladoEm: em }
+          : { canceladoPor: null, canceladoEm: null };
     await this.db
       .update(t.pedido)
       .set({ retirada, ...quem })
@@ -288,6 +308,15 @@ class PedidosPg implements PedidoRepo {
         ),
       )
       .orderBy(asc(t.produto.nome));
+
+    // Nomes de quem reservou, retirou e cancelou, numa consulta só.
+    const ids = [...new Set(linhas.flatMap(({ pedido: p }) => [p.criadoPor, p.retiradoPor, p.canceladoPor]).filter((id): id is string => !!id))];
+    const pessoas = new Map(
+      ids.length ? (await this.db.select({ id: t.usuario.id, nome: t.usuario.nome }).from(t.usuario).where(inArray(t.usuario.id, ids))).map((u) => [u.id, u.nome]) : [],
+    );
+    const nome = (id: string | null) => (id ? pessoas.get(id) : undefined);
+    const data = (em: Date | null) => em?.toISOString();
+
     return linhas.map(({ pedido, cliente }) => ({
       id: pedido.id,
       numero: pedido.numero,
@@ -298,6 +327,14 @@ class PedidosPg implements PedidoRepo {
         .map((i) => ({ produtoId: i.item.produtoId, nome: i.nome, quantidade: i.item.quantidade, precoUnitario: centavos(i.item.precoUnitario) })),
       retirada: pedido.retirada,
       pagamento: pedido.pagamento,
+      registro: {
+        reservadoPor: nome(pedido.criadoPor),
+        reservadoEm: data(pedido.criadoEm),
+        retiradoPor: nome(pedido.retiradoPor),
+        retiradoEm: data(pedido.retiradoEm),
+        canceladoPor: nome(pedido.canceladoPor),
+        canceladoEm: data(pedido.canceladoEm),
+      },
     }));
   }
 }

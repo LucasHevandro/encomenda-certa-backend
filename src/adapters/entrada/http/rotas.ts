@@ -35,6 +35,13 @@ export class SessaoRotas {
     return usuario;
   }
 
+  @Put('senha')
+  @HttpCode(204)
+  async mudarSenha(@Body() corpo: unknown, @UsuarioLogado() usuario: Usuario) {
+    const { senhaAtual, novaSenha } = validar(esquemas.mudarSenha, corpo);
+    await this.acesso.mudarSenha(usuario.id, senhaAtual, novaSenha);
+  }
+
   @Publico()
   @Delete()
   @HttpCode(204)
@@ -156,6 +163,13 @@ export class PedidosRotas {
     return this.pedidos.registrarPagamento(id, validar(esquemas.pagamento, corpo).pagamento);
   }
 
+  /** 409 com { maximo } quando as unidades já foram vendidas para outro. */
+  @Post(':id/reativacao')
+  @HttpCode(200)
+  reativar(@Param('id') id: string, @UsuarioLogado() usuario: Usuario) {
+    return this.pedidos.reativar(id, usuario.id);
+  }
+
   @Post(':id/cancelamento')
   @HttpCode(200)
   cancelar(@Param('id') id: string, @UsuarioLogado() usuario: Usuario) {
@@ -169,7 +183,19 @@ export class CadastrosRotas {
     @Inject(Produtos) private readonly produtos: Produtos,
     @Inject(Clientes) private readonly clientes: Clientes,
     @Inject(Espera) private readonly espera: Espera,
+    @Inject(Acesso) private readonly acesso: Acesso,
   ) {}
+
+  @Get('usuarios')
+  listarUsuarios() {
+    return this.acesso.listarUsuarios();
+  }
+
+  @Post('usuarios')
+  criarUsuario(@Body() corpo: unknown) {
+    const { nome, email, senha } = validar(esquemas.novoUsuario, corpo);
+    return this.acesso.criarUsuario(nome, email, senha);
+  }
 
   @Get('produtos')
   listarProdutos() {

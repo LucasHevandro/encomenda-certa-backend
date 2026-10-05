@@ -18,6 +18,8 @@ const itens = z.array(z.object({ produtoId: id, quantidade: inteiro.min(0) })).m
 
 export const esquemas = {
   entrar: z.object({ email: z.string(), senha: z.string() }),
+  novoUsuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }),
+  mudarSenha: z.object({ senhaAtual: z.string(), novaSenha: z.string().max(200) }),
   novoPedido: z.object({ cliente, itens }),
   editarPedido: z.object({ itens }),
   pagamento: z.object({ pagamento: z.enum(['pendente', 'pix', 'dinheiro', 'cartao']) }),

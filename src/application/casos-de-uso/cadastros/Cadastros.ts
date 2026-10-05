@@ -114,9 +114,33 @@ export class Acesso {
     return this.uow.leitura.usuarios.porId(id);
   }
 
-  async criarUsuario(nome: string, email: string, senha: string): Promise<Usuario> {
-    if (senha.length < 8) throw new ErroDeDominio('senha-curta', 'A senha precisa de pelo menos 8 caracteres.');
-    const senhaHash = await this.hash.gerar(senha);
-    return this.uow.executar((r) => r.usuarios.criar({ nome: nome.trim(), email: email.trim().toLowerCase(), senhaHash }));
+  listarUsuarios(): Promise<Usuario[]> {
+    return this.uow.leitura.usuarios.listar();
   }
+
+  /** Qualquer pessoa com acesso cria outra: todos têm as mesmas permissões. */
+  async criarUsuario(nome: string, email: string, senha: string): Promise<Usuario> {
+    const nomeLimpo = nome.trim();
+    const emailLimpo = email.trim().toLowerCase();
+    if (nomeLimpo === '') throw new ErroDeDominio('usuario-sem-nome', 'Informe o nome da pessoa.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) throw new ErroDeDominio('email-invalido', 'Informe um e-mail válido.');
+    validarSenha(senha);
+    const senhaHash = await this.hash.gerar(senha);
+    return this.uow.executar((r) => r.usuarios.criar({ nome: nomeLimpo, email: emailLimpo, senhaHash }));
+  }
+
+  /** Troca a própria senha, conferindo a atual. */
+  async mudarSenha(usuarioId: string, senhaAtual: string, novaSenha: string): Promise<void> {
+    const guardada = await this.uow.leitura.usuarios.senhaHash(usuarioId);
+    if (!guardada || !(await this.hash.conferir(senhaAtual, guardada))) {
+      throw new ErroDeDominio('senha-atual-incorreta', 'A senha atual está incorreta.');
+    }
+    validarSenha(novaSenha);
+    const hash = await this.hash.gerar(novaSenha);
+    await this.uow.executar((r) => r.usuarios.mudarSenha(usuarioId, hash));
+  }
+}
+
+function validarSenha(senha: string) {
+  if (senha.length < 8) throw new ErroDeDominio('senha-curta', 'A senha precisa de pelo menos 8 caracteres.');
 }

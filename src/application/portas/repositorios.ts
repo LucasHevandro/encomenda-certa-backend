@@ -18,6 +18,9 @@ export interface UsuarioRepo {
   porEmail(email: string): Promise<(Usuario & { senhaHash: string }) | null>;
   porId(id: string): Promise<Usuario | null>;
   criar(usuario: { nome: string; email: string; senhaHash: string }): Promise<Usuario>;
+  listar(): Promise<Usuario[]>;
+  senhaHash(id: string): Promise<string | null>;
+  mudarSenha(id: string, senhaHash: string): Promise<void>;
 }
 
 export interface ProdutoRepo {
