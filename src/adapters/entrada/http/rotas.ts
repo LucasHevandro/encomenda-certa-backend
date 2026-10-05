@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Header, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Res, Sse } from '@nestjs/common';
-import type { Response } from 'express';
+import { Body, Controller, Delete, Get, Header, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Req, Res, Sse } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { interval, map, merge, type Observable } from 'rxjs';
 import { Acesso, Clientes, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
 import { Dias } from '../../../application/casos-de-uso/dias/Dias.js';
@@ -7,6 +7,8 @@ import { Pedidos } from '../../../application/casos-de-uso/pedidos/Pedidos.js';
 import { Producao } from '../../../application/casos-de-uso/producao/Producao.js';
 import type { Usuario } from '../../../application/portas/repositorios.js';
 import { centavos } from '../../../domain/compartilhado/Dinheiro.js';
+import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
+import { LimiteDeTentativas } from './limiteDeTentativas.js';
 import { PublicadorSSE } from '../../saida/servicos.js';
 import { CookieDeSessao, Publico, UsuarioLogado } from './sessao.js';
 import { esquemas, validar } from './validacao.js';
@@ -18,16 +20,26 @@ export class SessaoRotas {
   constructor(
     @Inject(Acesso) private readonly acesso: Acesso,
     @Inject(CookieDeSessao) private readonly cookie: CookieDeSessao,
+    @Inject(LimiteDeTentativas) private readonly limite: LimiteDeTentativas,
   ) {}
 
+  /** Depois de 5 senhas erradas seguidas para o mesmo e-mail e endereço, 429 por 15 minutos. */
   @Publico()
   @Post()
   @HttpCode(200)
-  async entrar(@Body() corpo: unknown, @Res({ passthrough: true }) resposta: Response) {
+  async entrar(@Body() corpo: unknown, @Req() requisicao: Request, @Res({ passthrough: true }) resposta: Response) {
     const { email, senha } = validar(esquemas.entrar, corpo);
-    const usuario = await this.acesso.entrar(email, senha);
-    this.cookie.gravar(resposta, usuario.id);
-    return usuario;
+    const chave = `${requisicao.ip ?? ''}|${email.trim().toLowerCase()}`;
+    this.limite.conferir(chave);
+    try {
+      const usuario = await this.acesso.entrar(email, senha);
+      this.limite.registrarAcerto(chave);
+      this.cookie.gravar(resposta, usuario.id);
+      return usuario;
+    } catch (erro) {
+      if (erro instanceof ErroDeDominio && erro.codigo === 'login-invalido') this.limite.registrarErro(chave);
+      throw erro;
+    }
   }
 
   @Get()

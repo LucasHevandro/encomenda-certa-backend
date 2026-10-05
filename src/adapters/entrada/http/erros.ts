@@ -16,6 +16,7 @@ const STATUS: Record<string, number> = {
   'dia-encerrado': 409,
   'pedido-nao-cancelado': 409,
   'senha-atual-incorreta': 422,
+  'muitas-tentativas': 429,
 };
 
 /**

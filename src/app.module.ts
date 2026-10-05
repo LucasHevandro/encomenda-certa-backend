@@ -2,6 +2,7 @@ import { type DynamicModule, type FactoryProvider, Module, type Type } from '@ne
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { FiltroDeErros } from './adapters/entrada/http/erros.js';
 import { CadastrosRotas, DiasRotas, PedidosRotas, SessaoRotas } from './adapters/entrada/http/rotas.js';
+import { LimiteDeTentativas } from './adapters/entrada/http/limiteDeTentativas.js';
 import { CookieDeSessao, ENV, GuardaDeSessao } from './adapters/entrada/http/sessao.js';
 import { HashScrypt, PublicadorSSE, RelogioDoSistema } from './adapters/saida/servicos.js';
 import { Acesso, Clientes, Espera, Produtos } from './application/casos-de-uso/cadastros/Cadastros.js';
@@ -41,6 +42,7 @@ export class AppModule {
         { provide: Clientes, useFactory: (u: UnidadeDeTrabalho) => new Clientes(u), inject: [TOKENS.uow] },
         { provide: Acesso, useFactory: (u: UnidadeDeTrabalho, h: HashDeSenha) => new Acesso(u, h), inject: [TOKENS.uow, TOKENS.hash] },
         CookieDeSessao,
+        { provide: LimiteDeTentativas, useValue: new LimiteDeTentativas() },
         { provide: APP_GUARD, useClass: GuardaDeSessao },
         { provide: APP_FILTER, useClass: FiltroDeErros },
       ],

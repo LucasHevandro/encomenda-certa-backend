@@ -29,6 +29,18 @@ describe('pessoas, quem fez e reativação', () => {
     await request(amb.app.getHttpServer()).post('/sessao').send({ email: 'maria@expressocafe.com', senha: 'nova-senha-123' }).expect(200);
   });
 
+  it('depois de 5 senhas erradas, nem a certa entra por um tempo', async () => {
+    await amb.logado.post('/usuarios').send({ nome: 'Rita', email: 'rita@expressocafe.com', senha: 'senha-da-rita' }).expect(201);
+    const anonimo = request(amb.app.getHttpServer());
+    for (let i = 0; i < 5; i++) {
+      await anonimo.post('/sessao').send({ email: 'rita@expressocafe.com', senha: `errada-${i}` }).expect(401);
+    }
+    const { body } = await anonimo.post('/sessao').send({ email: 'rita@expressocafe.com', senha: 'senha-da-rita' }).expect(429);
+    expect(body).toMatchObject({ codigo: 'muitas-tentativas', mensagem: expect.stringContaining('15 minutos') });
+    // Outro e-mail do mesmo endereço continua entrando.
+    await anonimo.post('/sessao').send({ email: 'lusca@expressocafe.com', senha: 'senha-forte-123' }).expect(200);
+  });
+
   it('o pedido mostra quem reservou, retirou e cancelou', async () => {
     const { diaId, ids } = await abrirDia(amb, '2026-10-04', { Frango: { preco: 5500, quantidade: 10 } });
     const { body: pedido } = await amb.logado
