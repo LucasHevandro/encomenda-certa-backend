@@ -10,6 +10,7 @@ import { centavos } from '../../../domain/compartilhado/Dinheiro.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { LimiteDeTentativas } from './limiteDeTentativas.js';
 import { PublicadorSSE } from '../../saida/servicos.js';
+import { gerarOpenApi } from './contrato.js';
 import { CookieDeSessao, Publico, UsuarioLogado } from './sessao.js';
 import { esquemas, validar } from './validacao.js';
 
@@ -246,6 +247,13 @@ export class CadastrosRotas {
   @Patch('espera/:id')
   mudarEspera(@Param('id') id: string, @Body() corpo: unknown) {
     return this.espera.mudarStatus(id, validar(esquemas.mudarEspera, corpo).status);
+  }
+
+  /** Contrato da API, para gerar os tipos do front. */
+  @Publico()
+  @Get('openapi.json')
+  openapi() {
+    return gerarOpenApi();
   }
 
   @Publico()

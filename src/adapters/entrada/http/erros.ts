@@ -43,7 +43,7 @@ export class FiltroDeErros implements ExceptionFilter {
     }
     if (erro instanceof HttpException) {
       const status = erro.getStatus();
-      return resposta.status(status).json({ codigo: status === 404 ? 'nao-encontrado' : 'requisicao-invalida', mensagem: erro.message });
+      return resposta.status(status).json({ codigo: status === 404 ? 'rota-inexistente' : 'requisicao-invalida', mensagem: erro.message });
     }
     this.log.error(erro);
     return resposta.status(500).json({ codigo: 'erro-interno', mensagem: 'Algo deu errado. Tente de novo.' });

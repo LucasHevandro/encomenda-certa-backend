@@ -27,6 +27,13 @@ O `test/integracao/reserva.e2e-spec.ts` dispara pedidos simultâneos para o últ
 
 Para usar outro Postgres nos testes, defina `DATABASE_URL_TESTE`.
 
+## Contrato (OpenAPI)
+
+O formato de cada resposta está em `src/adapters/entrada/http/contrato.ts` (Zod). Dele sai o `openapi.json` (`pnpm openapi`), que também é servido em `GET /openapi.json`. O front gera os tipos com `pnpm api:tipos`.
+
+- Um teste de unidade falha se o `openapi.json` estiver desatualizado.
+- Um teste de integração confere as respostas reais contra o contrato e que todas as rotas existem.
+
 ## Como a reserva fica segura
 
 1. A transação trava o dia em modo compartilhado (`FOR SHARE`), para ninguém fechar o dia no meio.

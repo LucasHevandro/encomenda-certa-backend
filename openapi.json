@@ -1,0 +1,2278 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Expresso café — API",
+    "version": "1.0.0",
+    "description": "Dinheiro em centavos. Sessão por cookie httpOnly."
+  },
+  "components": {
+    "schemas": {
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "mensagem": {
+            "type": "string"
+          },
+          "produtoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "solicitado": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maximo": {
+            "description": "No 409 quantidade-indisponivel: o máximo que ainda cabe",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "novaProducao": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "minimo": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "codigo",
+          "mensagem"
+        ],
+        "additionalProperties": false
+      },
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "Produto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "preco": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "preco",
+          "ativo"
+        ],
+        "additionalProperties": false
+      },
+      "DiaVenda": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Data do dia de venda, ex.: 2026-10-04"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aberto",
+              "encerrado"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "data",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "EstoqueDoProduto": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "producao": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reservados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Itens de pedidos ainda não retirados"
+          },
+          "vendidos": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Itens de pedidos já retirados"
+          }
+        },
+        "required": [
+          "produtoId",
+          "nome",
+          "producao",
+          "reservados",
+          "vendidos"
+        ],
+        "additionalProperties": false
+      },
+      "ItemPedido": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "precoUnitario": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          }
+        },
+        "required": [
+          "produtoId",
+          "nome",
+          "quantidade",
+          "precoUnitario"
+        ],
+        "additionalProperties": false
+      },
+      "RegistroDoPedido": {
+        "type": "object",
+        "properties": {
+          "reservadoPor": {
+            "type": "string"
+          },
+          "reservadoEm": {
+            "type": "string"
+          },
+          "retiradoPor": {
+            "type": "string"
+          },
+          "retiradoEm": {
+            "type": "string"
+          },
+          "canceladoPor": {
+            "type": "string"
+          },
+          "canceladoEm": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Pedido": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "diaId": {
+            "type": "string"
+          },
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "telefone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome"
+            ],
+            "additionalProperties": false
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemPedido"
+            }
+          },
+          "retirada": {
+            "type": "string",
+            "enum": [
+              "reservado",
+              "retirado",
+              "cancelado"
+            ]
+          },
+          "pagamento": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "pix",
+              "dinheiro",
+              "cartao"
+            ]
+          },
+          "registro": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegistroDoPedido"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "diaId",
+          "cliente",
+          "itens",
+          "retirada",
+          "pagamento"
+        ],
+        "additionalProperties": false
+      },
+      "ResultadoCancelamento": {
+        "type": "object",
+        "properties": {
+          "unidadesLiberadas": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "clientesAguardando": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "unidadesLiberadas",
+          "clientesAguardando"
+        ],
+        "additionalProperties": false
+      },
+      "ResumoDia": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "$ref": "#/components/schemas/DiaVenda"
+          },
+          "pedidos": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "itensDisponiveis": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "faturamento": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          },
+          "sobras": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "dia",
+          "pedidos",
+          "itensDisponiveis"
+        ],
+        "additionalProperties": false
+      },
+      "PainelDoDia": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "$ref": "#/components/schemas/DiaVenda"
+          },
+          "estoques": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstoqueDoProduto"
+            }
+          },
+          "pedidos": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "itensReservados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "valorReservado": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          },
+          "aguardandoRetirada": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "proximoARetirar": {
+            "type": "object",
+            "properties": {
+              "numero": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "cliente": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "numero",
+              "cliente"
+            ],
+            "additionalProperties": false
+          },
+          "clientesAguardando": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "required": [
+          "dia",
+          "estoques",
+          "pedidos",
+          "itensReservados",
+          "valorReservado",
+          "aguardandoRetirada",
+          "clientesAguardando"
+        ],
+        "additionalProperties": false
+      },
+      "SugestaoProducao": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "ultimo": {
+            "type": "number"
+          },
+          "media": {
+            "type": "number"
+          },
+          "sobraMedia": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "produtoId",
+          "nome",
+          "ultimo",
+          "media",
+          "sobraMedia"
+        ],
+        "additionalProperties": false
+      },
+      "AlteracaoProducao": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string"
+          },
+          "de": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "para": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "em": {
+            "type": "string"
+          },
+          "usuario": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "produtoId",
+          "de",
+          "para",
+          "em",
+          "usuario"
+        ],
+        "additionalProperties": false
+      },
+      "ClienteEncontrado": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "telefone": {
+            "type": "string"
+          },
+          "pedidosAnteriores": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "pedidosAnteriores"
+        ],
+        "additionalProperties": false
+      },
+      "HistoricoDoCliente": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "$ref": "#/components/schemas/ClienteEncontrado"
+          },
+          "totalGasto": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          },
+          "naoRetirados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "favoritos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "produtoId": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "produtoId",
+                "nome",
+                "quantidade"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "pedidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "numero": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "diaId": {
+                  "type": "string"
+                },
+                "cliente": {
+                  "type": "object",
+                  "properties": {
+                    "nome": {
+                      "type": "string"
+                    },
+                    "telefone": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "nome"
+                  ],
+                  "additionalProperties": false
+                },
+                "itens": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemPedido"
+                  }
+                },
+                "retirada": {
+                  "type": "string",
+                  "enum": [
+                    "reservado",
+                    "retirado",
+                    "cancelado"
+                  ]
+                },
+                "pagamento": {
+                  "type": "string",
+                  "enum": [
+                    "pendente",
+                    "pix",
+                    "dinheiro",
+                    "cartao"
+                  ]
+                },
+                "registro": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RegistroDoPedido"
+                    }
+                  ]
+                },
+                "data": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Data do dia de venda, ex.: 2026-10-04"
+                }
+              },
+              "required": [
+                "id",
+                "numero",
+                "diaId",
+                "cliente",
+                "itens",
+                "retirada",
+                "pagamento",
+                "data"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "cliente",
+          "totalGasto",
+          "naoRetirados",
+          "favoritos",
+          "pedidos"
+        ],
+        "additionalProperties": false
+      },
+      "EntradaEspera": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "diaId": {
+            "type": "string"
+          },
+          "produtoId": {
+            "type": "string"
+          },
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "telefone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome"
+            ],
+            "additionalProperties": false
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "posicao": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "aguardando",
+              "atendido",
+              "desistiu"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "diaId",
+          "produtoId",
+          "cliente",
+          "quantidade",
+          "posicao",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "FechamentoDoProduto": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "produzidos": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reservados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "retirados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "naoRetirados": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "sobras": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "produtoId",
+          "nome",
+          "produzidos",
+          "reservados",
+          "retirados",
+          "naoRetirados",
+          "sobras"
+        ],
+        "additionalProperties": false
+      },
+      "DiaFechado": {
+        "type": "object",
+        "properties": {
+          "diaId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Data do dia de venda, ex.: 2026-10-04"
+          },
+          "faturamento": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Valor em centavos (R$ 55,00 = 5500)"
+          },
+          "produtos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FechamentoDoProduto"
+            }
+          }
+        },
+        "required": [
+          "diaId",
+          "data",
+          "faturamento",
+          "produtos"
+        ],
+        "additionalProperties": false
+      },
+      "Entrar": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "senha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "senha"
+        ],
+        "additionalProperties": false
+      },
+      "NovoUsuario": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "senha": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ],
+        "additionalProperties": false
+      },
+      "MudarSenha": {
+        "type": "object",
+        "properties": {
+          "senhaAtual": {
+            "type": "string"
+          },
+          "novaSenha": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "senhaAtual",
+          "novaSenha"
+        ],
+        "additionalProperties": false
+      },
+      "NovoPedido": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "telefone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome"
+            ],
+            "additionalProperties": false
+          },
+          "itens": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "produtoId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "produtoId",
+                "quantidade"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "cliente",
+          "itens"
+        ],
+        "additionalProperties": false
+      },
+      "EditarPedido": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "produtoId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "produtoId",
+                "quantidade"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "itens"
+        ],
+        "additionalProperties": false
+      },
+      "Pagamento": {
+        "type": "object",
+        "properties": {
+          "pagamento": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "pix",
+              "dinheiro",
+              "cartao"
+            ]
+          }
+        },
+        "required": [
+          "pagamento"
+        ],
+        "additionalProperties": false
+      },
+      "AbrirDia": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "producao": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "produtoId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "produtoId",
+                "quantidade"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "data",
+          "producao"
+        ],
+        "additionalProperties": false
+      },
+      "SalvarProducao": {
+        "type": "object",
+        "properties": {
+          "quantidades": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "produtoId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "produtoId",
+                "quantidade"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "quantidades"
+        ],
+        "additionalProperties": false
+      },
+      "NovoProduto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "preco": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "nome",
+          "preco"
+        ],
+        "additionalProperties": false
+      },
+      "MudarProduto": {
+        "type": "object",
+        "properties": {
+          "preco": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "NovaEspera": {
+        "type": "object",
+        "properties": {
+          "produtoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "telefone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "nome"
+            ],
+            "additionalProperties": false
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "produtoId",
+          "cliente",
+          "quantidade"
+        ],
+        "additionalProperties": false
+      },
+      "MudarEspera": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "aguardando",
+              "atendido",
+              "desistiu"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "expresso_sessao"
+      }
+    }
+  },
+  "security": [
+    {
+      "cookie": []
+    }
+  ],
+  "paths": {
+    "/sessao": {
+      "post": {
+        "summary": "Entrar (grava o cookie de sessão)",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Entrar"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Quem está logado",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Sair",
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sessao/senha": {
+      "put": {
+        "summary": "Trocar a própria senha",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarSenha"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios": {
+      "get": {
+        "summary": "Pessoas com acesso",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Usuario"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Dar acesso a alguém",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoUsuario"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias": {
+      "get": {
+        "summary": "Dias de venda",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumoDia"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Abrir dia de venda",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AbrirDia"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiaVenda"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/sugestao-producao": {
+      "get": {
+        "summary": "Último, média e sobra média por produto",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SugestaoProducao"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/relatorio": {
+      "get": {
+        "summary": "Fotos dos últimos dias fechados",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "required": false,
+            "description": "Quantos dias (1 a 26, padrão 8)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiaFechado"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/painel": {
+      "get": {
+        "summary": "Início do dia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PainelDoDia"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/fechamento": {
+      "post": {
+        "summary": "Fechar o dia (somente leitura depois)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/pedidos": {
+      "get": {
+        "summary": "Pedidos do dia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "retirada",
+            "in": "query",
+            "required": false,
+            "description": "reservado | retirado | cancelado",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "busca",
+            "in": "query",
+            "required": false,
+            "description": "Nome, telefone ou número",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Pedido"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Confirmar reserva (409 com o máximo se não couber)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoPedido"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/producao": {
+      "get": {
+        "summary": "Produção, reservados e vendidos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EstoqueDoProduto"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Salvar produção (409 abaixo do reservado)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalvarProducao"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/producao/historico": {
+      "get": {
+        "summary": "Quem mudou a produção",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AlteracaoProducao"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/espera": {
+      "get": {
+        "summary": "Lista de espera do dia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EntradaEspera"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Entrar na lista de espera",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaEspera"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntradaEspera"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dias/{id}/eventos": {
+      "get": {
+        "summary": "Tempo real (text/event-stream): disponibilidade-mudou, unidades-liberadas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}": {
+      "get": {
+        "summary": "Detalhe do pedido",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Editar itens (409 se não couber)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditarPedido"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/retirada": {
+      "post": {
+        "summary": "Marcar como retirado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/pagamento": {
+      "put": {
+        "summary": "Registrar pagamento",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pagamento"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/cancelamento": {
+      "post": {
+        "summary": "Cancelar reserva",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoCancelamento"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/reativacao": {
+      "post": {
+        "summary": "Reativar cancelado (409 se não couber)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produtos": {
+      "get": {
+        "summary": "Produtos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Produto"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cadastrar produto",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovoProduto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produtos/{id}": {
+      "patch": {
+        "summary": "Mudar preço ou ativar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarProduto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clientes": {
+      "get": {
+        "summary": "Clientes (com ?telefone=, no máximo um)",
+        "parameters": [
+          {
+            "name": "telefone",
+            "in": "query",
+            "required": false,
+            "description": "Só dígitos, com DDD",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClienteEncontrado"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clientes/{id}": {
+      "get": {
+        "summary": "Histórico do cliente",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricoDoCliente"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/espera/{id}": {
+      "patch": {
+        "summary": "Atendido ou desistiu",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarEspera"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntradaEspera"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

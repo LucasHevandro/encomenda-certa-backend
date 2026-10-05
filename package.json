@@ -22,7 +22,8 @@
     "db:subir": "docker compose up -d --wait",
     "db:gerar": "drizzle-kit generate",
     "usuario:criar": "nest build && node dist/scripts/criar-usuario.js",
-    "test:integracao": "vitest run --config ./vitest.config.e2e.ts"
+    "test:integracao": "vitest run --config ./vitest.config.e2e.ts",
+    "openapi": "nest build && node dist/scripts/gerar-openapi.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
