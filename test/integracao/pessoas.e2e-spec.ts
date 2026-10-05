@@ -41,6 +41,26 @@ describe('pessoas, quem fez e reativação', () => {
     await anonimo.post('/sessao').send({ email: 'lusca@expressocafe.com', senha: 'senha-forte-123' }).expect(200);
   });
 
+  it('histórico do cliente: pedidos, total gasto e o que mais pede', async () => {
+    const { diaId, ids } = await abrirDia(amb, '2026-11-15', { Costela: { preco: 9000, quantidade: 20 }, Farofa: { preco: 1000, quantidade: 20 } });
+    const pedir = (itens: { produtoId: string; quantidade: number }[]) =>
+      amb.logado.post(`/dias/${diaId}/pedidos`).send({ cliente: { nome: 'Joana', telefone: '44911112222' }, itens }).expect(201);
+    await pedir([{ produtoId: ids.Costela, quantidade: 2 }]);
+    await pedir([{ produtoId: ids.Costela, quantidade: 1 }, { produtoId: ids.Farofa, quantidade: 1 }]);
+    const { body: cancelado } = await pedir([{ produtoId: ids.Farofa, quantidade: 5 }]);
+    await amb.logado.post(`/pedidos/${cancelado.id}/cancelamento`).expect(200);
+
+    const [cliente] = (await amb.logado.get('/clientes?telefone=44911112222').expect(200)).body;
+    const { body } = await amb.logado.get(`/clientes/${cliente.id}`).expect(200);
+    expect(body.cliente).toMatchObject({ nome: 'Joana', pedidosAnteriores: 2 });
+    expect(body.totalGasto).toBe(3 * 9000 + 1000);
+    expect(body.naoRetirados).toBe(2);
+    expect(body.favoritos[0]).toMatchObject({ nome: 'Costela', quantidade: 3 });
+    expect(body.pedidos).toHaveLength(3);
+    expect(body.pedidos[0]).toMatchObject({ data: '2026-11-15', retirada: 'cancelado' });
+    await amb.logado.get('/clientes/00000000-0000-0000-0000-000000000000').expect(404);
+  });
+
   it('o pedido mostra quem reservou, retirou e cancelou', async () => {
     const { diaId, ids } = await abrirDia(amb, '2026-10-04', { Frango: { preco: 5500, quantidade: 10 } });
     const { body: pedido } = await amb.logado

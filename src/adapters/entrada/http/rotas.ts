@@ -226,6 +226,11 @@ export class CadastrosRotas {
     return this.produtos.atualizar(id, { ...(preco != null && { preco: centavos(preco) }), ...(ativo != null && { ativo }) });
   }
 
+  @Get('clientes/:id')
+  historicoDoCliente(@Param('id') id: string) {
+    return this.clientes.historico(id);
+  }
+
   /** Com ?telefone= devolve no máximo um cliente (telefone é único). */
   @Get('clientes')
   listarClientes(@Query('telefone') telefone?: string) {

@@ -80,6 +80,8 @@ export interface FiltroPedidos {
 
 export interface PedidoRepo {
   listar(diaId: string, filtro?: FiltroPedidos): Promise<Pedido[]>;
+  /** Todos os pedidos de um cliente, do mais novo para o mais antigo, com a data do dia de venda. */
+  doCliente(clienteId: string): Promise<{ pedido: Pedido; data: string }[]>;
   obter(id: string): Promise<Pedido | null>;
   /** Trava o pedido (FOR UPDATE) antes de mudar retirada, itens ou pagamento. */
   travar(id: string): Promise<Pedido | null>;
@@ -107,6 +109,7 @@ export interface ClienteRepo {
   obterOuCriar(cliente: ClienteDoPedido): Promise<string>;
   porTelefone(telefone: string): Promise<ClienteEncontrado | null>;
   listar(): Promise<ClienteEncontrado[]>;
+  obter(id: string): Promise<ClienteEncontrado | null>;
 }
 
 export interface EsperaRepo {

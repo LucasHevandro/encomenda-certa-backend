@@ -1,4 +1,5 @@
-import type { Dinheiro } from '../../../domain/compartilhado/Dinheiro.js';
+import { type Dinheiro, somar } from '../../../domain/compartilhado/Dinheiro.js';
+import { type Pedido, totalDoPedido } from '../../../domain/pedido/Pedido.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { existir } from '../../../domain/compartilhado/naoEncontrado.js';
 import { garantirAberto } from '../../../domain/dia-venda/DiaVenda.js';
@@ -45,6 +46,38 @@ export class Clientes {
   listar(): Promise<ClienteEncontrado[]> {
     return this.uow.leitura.clientes.listar();
   }
+
+  /** Pedidos anteriores, quanto já comprou e o que costuma pedir. Cancelados aparecem, mas não somam. */
+  async historico(id: string): Promise<HistoricoDoCliente> {
+    const r = this.uow.leitura;
+    const cliente = existir(await r.clientes.obter(id), 'Cliente');
+    const pedidos = await r.pedidos.doCliente(id);
+    const validos = pedidos.filter(({ pedido }) => pedido.retirada !== 'cancelado');
+    const porProduto = new Map<string, { produtoId: string; nome: string; quantidade: number }>();
+    for (const { pedido } of validos) {
+      for (const item of pedido.itens) {
+        const atual = porProduto.get(item.produtoId) ?? { produtoId: item.produtoId, nome: item.nome, quantidade: 0 };
+        porProduto.set(item.produtoId, { ...atual, quantidade: atual.quantidade + item.quantidade });
+      }
+    }
+    return {
+      cliente,
+      totalGasto: somar(...validos.map(({ pedido }) => totalDoPedido(pedido))),
+      naoRetirados: validos.filter(({ pedido }) => pedido.retirada === 'reservado').length,
+      favoritos: [...porProduto.values()].sort((a, b) => b.quantidade - a.quantidade).slice(0, 3),
+      pedidos: pedidos.map(({ pedido, data }) => ({ ...pedido, data })),
+    };
+  }
+}
+
+export interface HistoricoDoCliente {
+  readonly cliente: ClienteEncontrado;
+  readonly totalGasto: Dinheiro;
+  /** Pedidos ainda reservados (de dias abertos ou que ficaram sem retirar). */
+  readonly naoRetirados: number;
+  /** Até 3 produtos que mais pede, em quantidade. */
+  readonly favoritos: readonly { produtoId: string; nome: string; quantidade: number }[];
+  readonly pedidos: readonly (Pedido & { data: string })[];
 }
 
 export interface NovaEntradaEspera {

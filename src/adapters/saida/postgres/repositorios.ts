@@ -241,6 +241,19 @@ class PedidosPg implements PedidoRepo {
     );
   }
 
+  async doCliente(clienteId: string) {
+    if (!ehUuid(clienteId)) return [];
+    const linhas = await this.db
+      .select({ pedido: t.pedido, cliente: t.cliente, data: t.diaVenda.data })
+      .from(t.pedido)
+      .innerJoin(t.cliente, eq(t.cliente.id, t.pedido.clienteId))
+      .innerJoin(t.diaVenda, eq(t.diaVenda.id, t.pedido.diaId))
+      .where(eq(t.pedido.clienteId, clienteId))
+      .orderBy(desc(t.diaVenda.data), desc(t.pedido.numero));
+    const pedidos = await this.montar(linhas);
+    return pedidos.map((pedido, i) => ({ pedido, data: linhas[i].data }));
+  }
+
   async obter(id: string) {
     if (!ehUuid(id)) return null;
     const linhas = await this.db
@@ -358,6 +371,11 @@ class ClientesPg implements ClienteRepo {
 
   async porTelefone(telefone: string) {
     return (await this.consultar(eq(t.cliente.telefone, telefone)))[0] ?? null;
+  }
+
+  async obter(id: string) {
+    if (!ehUuid(id)) return null;
+    return (await this.consultar(eq(t.cliente.id, id)))[0] ?? null;
   }
 
   listar() {
