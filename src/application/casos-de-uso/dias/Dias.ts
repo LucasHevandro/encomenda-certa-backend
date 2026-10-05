@@ -5,7 +5,7 @@ import { type DiaVenda, garantirAberto, validarNovaData } from '../../../domain/
 import { disponiveis, type EstoqueDoProduto } from '../../../domain/disponibilidade/Disponibilidade.js';
 import { calcularFechamento } from '../../../domain/fechamento/Fechamento.js';
 import { totalDoPedido } from '../../../domain/pedido/Pedido.js';
-import type { SugestaoProducao } from '../../portas/repositorios.js';
+import type { DiaFechado, SugestaoProducao } from '../../portas/repositorios.js';
 import type { PublicadorDeEventos, Relogio, UnidadeDeTrabalho } from '../../portas/servicos.js';
 
 /** Linha da tela "Dias de venda". */
@@ -83,6 +83,11 @@ export class Dias {
 
   sugestaoProducao(): Promise<SugestaoProducao[]> {
     return this.uow.leitura.producao.sugestao();
+  }
+
+  /** Últimos dias fechados (até 26, meio ano de domingos), com a foto de cada produto. */
+  relatorio(dias = 8): Promise<DiaFechado[]> {
+    return this.uow.leitura.fechamentos.ultimos(Math.min(Math.max(1, Math.trunc(dias) || 8), 26));
   }
 
   async abrir(comando: AbrirDia): Promise<DiaVenda> {

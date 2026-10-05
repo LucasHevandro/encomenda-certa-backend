@@ -99,6 +99,18 @@ describe('fluxo do dia de venda', () => {
     const fechado = dias.find((d: { dia: { id: string } }) => d.dia.id === diaId);
     expect(fechado).toMatchObject({ dia: { status: 'encerrado' }, faturamento: 4 * 5500, sobras: 8 + 5 });
 
+    // O relatório entre dias traz a foto gravada no fechamento.
+    const { body: relatorio } = await api.get('/dias/relatorio?dias=4').expect(200);
+    expect(relatorio).toHaveLength(1);
+    expect(relatorio[0]).toMatchObject({ diaId, data: '2026-10-04', faturamento: 4 * 5500 });
+    expect(relatorio[0].produtos.find((p: { produtoId: string }) => p.produtoId === ids.Frango)).toMatchObject({
+      nome: 'Frango',
+      produzidos: 12,
+      retirados: 4,
+      naoRetirados: 0,
+      sobras: 8,
+    });
+
     // O próximo dia sugere a produção do último fechado.
     const { body: sugestao } = await api.get('/dias/sugestao-producao').expect(200);
     expect(sugestao.find((s: { produtoId: string }) => s.produtoId === ids.Frango)).toMatchObject({ ultimo: 12, media: 12, sobraMedia: 8 });

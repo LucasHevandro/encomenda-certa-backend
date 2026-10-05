@@ -77,6 +77,12 @@ export class DiasRotas {
     return this.dias.listar();
   }
 
+  /** Fotos dos últimos dias fechados, para o relatório entre dias. ?dias=8 */
+  @Get('relatorio')
+  relatorio(@Query('dias') dias?: string) {
+    return this.dias.relatorio(Number(dias ?? 8));
+  }
+
   @Get('sugestao-producao')
   sugestao() {
     return this.dias.sugestaoProducao();

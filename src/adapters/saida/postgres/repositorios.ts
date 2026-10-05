@@ -4,6 +4,7 @@ import type {
   AlteracaoProducao,
   ClienteEncontrado,
   ClienteRepo,
+  DiaFechado,
   DiaRepo,
   EsperaRepo,
   FechamentoRepo,
@@ -450,6 +451,38 @@ class EsperaPg implements EsperaRepo {
 
 class FechamentosPg implements FechamentoRepo {
   constructor(private readonly db: Banco) {}
+
+  async ultimos(limite: number): Promise<DiaFechado[]> {
+    const dias = await this.db
+      .select({ id: t.diaVenda.id, data: t.diaVenda.data, faturamento: t.diaVenda.faturamento })
+      .from(t.diaVenda)
+      .where(eq(t.diaVenda.status, 'encerrado'))
+      .orderBy(desc(t.diaVenda.data))
+      .limit(limite);
+    if (dias.length === 0) return [];
+    const fotos = await this.db
+      .select({ f: t.fechamentoProduto, nome: t.produto.nome })
+      .from(t.fechamentoProduto)
+      .innerJoin(t.produto, eq(t.produto.id, t.fechamentoProduto.produtoId))
+      .where(inArray(t.fechamentoProduto.diaId, dias.map((d) => d.id)))
+      .orderBy(asc(t.produto.nome));
+    return dias.map((d) => ({
+      diaId: d.id,
+      data: d.data,
+      faturamento: centavos(d.faturamento ?? 0),
+      produtos: fotos
+        .filter(({ f }) => f.diaId === d.id)
+        .map(({ f, nome }) => ({
+          produtoId: f.produtoId,
+          nome,
+          produzidos: f.produzidos,
+          reservados: f.reservados,
+          retirados: f.retirados,
+          naoRetirados: f.naoRetirados,
+          sobras: f.sobras,
+        })),
+    }));
+  }
 
   async gravar(diaId: string, produtos: readonly FechamentoDoProduto[], faturamento: Dinheiro) {
     if (produtos.length) {

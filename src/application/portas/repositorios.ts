@@ -124,6 +124,15 @@ export interface FechamentoRepo {
   /** Foto do dia, gravada ao fechar: histórico e médias imunes a mudanças de preço. */
   gravar(diaId: string, produtos: readonly FechamentoDoProduto[], faturamento: Dinheiro): Promise<void>;
   resumo(diaId: string): Promise<{ faturamento: Dinheiro; sobras: number } | null>;
+  /** Fotos dos últimos dias fechados, do mais recente para o mais antigo. */
+  ultimos(limite: number): Promise<DiaFechado[]>;
+}
+
+export interface DiaFechado {
+  readonly diaId: string;
+  readonly data: string;
+  readonly faturamento: Dinheiro;
+  readonly produtos: readonly FechamentoDoProduto[];
 }
 
 export interface Repositorios {
