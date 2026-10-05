@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Postgres de verdade: o teste da corrida pelo último item só se prova com o banco real.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: expresso
+          POSTGRES_PASSWORD: expresso
+          POSTGRES_DB: expresso_teste
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U expresso"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL_TESTE: postgres://expresso:expresso@localhost:5432/expresso_teste
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Tipos
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+      - name: Testes do domínio
+        run: pnpm test
+      - name: Testes de integração
+        run: pnpm test:integracao
+      - name: Build
+        run: pnpm build
