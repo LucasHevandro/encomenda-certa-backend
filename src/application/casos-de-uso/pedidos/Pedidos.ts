@@ -1,4 +1,5 @@
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
+import { CONFIGURACAO_PADRAO } from '../../../domain/configuracao/Configuracao.js';
 import { existir } from '../../../domain/compartilhado/naoEncontrado.js';
 import { garantirAberto } from '../../../domain/dia-venda/DiaVenda.js';
 import { type EstoqueDoProduto, type ItemSolicitado, verificarItens } from '../../../domain/disponibilidade/Disponibilidade.js';
@@ -143,6 +144,10 @@ export class Pedidos {
     const salvo = await this.uow.executar(async (r) => {
       const atual = existir(await r.pedidos.travar(pedidoId), 'Pedido');
       if (atual.retirada === 'cancelado') throw new ErroDeDominio('pedido-fechado', 'Este pedido foi cancelado.');
+      const { formasDePagamento } = (await r.configuracao.obter()) ?? CONFIGURACAO_PADRAO;
+      if (pagamento !== 'pendente' && !formasDePagamento.includes(pagamento)) {
+        throw new ErroDeDominio('pagamento-nao-aceito', 'Esta forma de pagamento não está ativa nas configurações.');
+      }
       await r.pedidos.mudarPagamento(pedidoId, pagamento);
       return existir(await r.pedidos.obter(pedidoId), 'Pedido');
     });

@@ -1,4 +1,5 @@
 import type { Dinheiro } from '../../domain/compartilhado/Dinheiro.js';
+import type { Configuracao } from '../../domain/configuracao/Configuracao.js';
 import type { DiaVenda } from '../../domain/dia-venda/DiaVenda.js';
 import type { EstoqueDoProduto, ItemSolicitado } from '../../domain/disponibilidade/Disponibilidade.js';
 import type { FechamentoDoProduto } from '../../domain/fechamento/Fechamento.js';
@@ -135,7 +136,14 @@ export interface DiaFechado {
   readonly produtos: readonly FechamentoDoProduto[];
 }
 
+export interface ConfiguracaoRepo {
+  /** null quando o estabelecimento ainda não salvou nada (valem os padrões). */
+  obter(): Promise<Configuracao | null>;
+  salvar(configuracao: Configuracao): Promise<void>;
+}
+
 export interface Repositorios {
+  readonly configuracao: ConfiguracaoRepo;
   readonly usuarios: UsuarioRepo;
   readonly produtos: ProdutoRepo;
   readonly dias: DiaRepo;

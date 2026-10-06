@@ -1,6 +1,7 @@
 import { type Dinheiro, somar } from '../../../domain/compartilhado/Dinheiro.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { existir } from '../../../domain/compartilhado/naoEncontrado.js';
+import { CONFIGURACAO_PADRAO } from '../../../domain/configuracao/Configuracao.js';
 import { type DiaVenda, garantirAberto, validarNovaData } from '../../../domain/dia-venda/DiaVenda.js';
 import { disponiveis, type EstoqueDoProduto } from '../../../domain/disponibilidade/Disponibilidade.js';
 import { calcularFechamento } from '../../../domain/fechamento/Fechamento.js';
@@ -95,7 +96,8 @@ export class Dias {
       throw new ErroDeDominio('producao-invalida', 'Produção inválida.');
     }
     return this.uow.executar(async (r) => {
-      validarNovaData(comando.data, await r.dias.datas());
+      const configuracao = (await r.configuracao.obter()) ?? CONFIGURACAO_PADRAO;
+      validarNovaData(comando.data, await r.dias.datas(), configuracao.diasDeVenda);
       const ids = comando.producao.map((p) => p.produtoId);
       const produtos = await r.produtos.porIds(ids);
       if (produtos.length !== new Set(ids).size) throw new ErroDeDominio('nao-encontrado', 'Produto não encontrado.');

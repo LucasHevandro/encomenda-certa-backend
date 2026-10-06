@@ -50,6 +50,62 @@
         ],
         "additionalProperties": false
       },
+      "Configuracao": {
+        "type": "object",
+        "properties": {
+          "nomeEstabelecimento": {
+            "type": "string"
+          },
+          "corPrincipal": {
+            "type": "string",
+            "description": "#rrggbb"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "enderecoRetirada": {
+            "type": "string"
+          },
+          "diasDeVenda": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "description": "0 = domingo … 6 = sábado"
+          },
+          "limiteAtencao": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "formasDePagamento": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pix",
+                "dinheiro",
+                "cartao"
+              ]
+            }
+          },
+          "mensagemWhatsapp": {
+            "type": "string",
+            "description": "Campos: {cliente} {numero} {itens} {total} {data} {estabelecimento} {endereco}"
+          }
+        },
+        "required": [
+          "nomeEstabelecimento",
+          "corPrincipal",
+          "diasDeVenda",
+          "limiteAtencao",
+          "formasDePagamento",
+          "mensagemWhatsapp"
+        ],
+        "additionalProperties": false
+      },
       "Usuario": {
         "type": "object",
         "properties": {
@@ -777,6 +833,63 @@
         ],
         "additionalProperties": false
       },
+      "SalvarConfiguracao": {
+        "type": "object",
+        "properties": {
+          "nomeEstabelecimento": {
+            "type": "string"
+          },
+          "corPrincipal": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "enderecoRetirada": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "diasDeVenda": {
+            "maxItems": 7,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
+          },
+          "limiteAtencao": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "formasDePagamento": {
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "pix",
+                "dinheiro",
+                "cartao"
+              ]
+            }
+          },
+          "mensagemWhatsapp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nomeEstabelecimento",
+          "corPrincipal",
+          "diasDeVenda",
+          "limiteAtencao",
+          "formasDePagamento",
+          "mensagemWhatsapp"
+        ],
+        "additionalProperties": false
+      },
       "NovoUsuario": {
         "type": "object",
         "properties": {
@@ -1179,6 +1292,69 @@
         "responses": {
           "204": {
             "description": "Sem conteúdo"
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuracao": {
+      "get": {
+        "summary": "Configurações do estabelecimento",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Configuracao"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Salvar configurações",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalvarConfiguracao"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Configuracao"
+                }
+              }
+            }
           },
           "4XX": {
             "description": "Erro com a mensagem para o balcão",

@@ -24,6 +24,19 @@ export const Erro = z
   })
   .meta({ id: 'Erro' });
 
+export const Configuracao = z
+  .object({
+    nomeEstabelecimento: z.string(),
+    corPrincipal: z.string().describe('#rrggbb'),
+    logoUrl: z.string().optional(),
+    enderecoRetirada: z.string().optional(),
+    diasDeVenda: z.array(z.number().int()).describe('0 = domingo … 6 = sábado'),
+    limiteAtencao: z.number().int(),
+    formasDePagamento: z.array(z.enum(['pix', 'dinheiro', 'cartao'])),
+    mensagemWhatsapp: z.string().describe('Campos: {cliente} {numero} {itens} {total} {data} {estabelecimento} {endereco}'),
+  })
+  .meta({ id: 'Configuracao' });
+
 export const Usuario = z.object({ id: z.string(), nome: z.string(), email: z.string() }).meta({ id: 'Usuario' });
 
 export const Produto = z.object({ id: z.string(), nome: z.string(), preco: centavos, ativo: z.boolean() }).meta({ id: 'Produto' });
@@ -148,6 +161,7 @@ export const DiaFechado = z
 // Corpos das requisições, com nome para aparecerem como componentes.
 const corpos = {
   Entrar: esquemas.entrar,
+  SalvarConfiguracao: esquemas.configuracao,
   NovoUsuario: esquemas.novoUsuario,
   MudarSenha: esquemas.mudarSenha,
   NovoPedido: esquemas.novoPedido,
@@ -182,6 +196,8 @@ export const ROTAS: Rota[] = [
   { metodo: 'get', caminho: '/sessao', resumo: 'Quem está logado', resposta: Usuario },
   { metodo: 'put', caminho: '/sessao/senha', resumo: 'Trocar a própria senha', corpo: esquemas.mudarSenha },
   { metodo: 'delete', caminho: '/sessao', resumo: 'Sair', publica: true },
+  { metodo: 'get', caminho: '/configuracao', resumo: 'Configurações do estabelecimento', resposta: Configuracao, publica: true },
+  { metodo: 'put', caminho: '/configuracao', resumo: 'Salvar configurações', corpo: esquemas.configuracao, resposta: Configuracao },
   { metodo: 'get', caminho: '/usuarios', resumo: 'Pessoas com acesso', resposta: z.array(Usuario) },
   { metodo: 'post', caminho: '/usuarios', resumo: 'Dar acesso a alguém', corpo: esquemas.novoUsuario, resposta: Usuario, status: 201 },
   { metodo: 'get', caminho: '/dias', resumo: 'Dias de venda', resposta: z.array(ResumoDia) },

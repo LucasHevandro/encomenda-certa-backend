@@ -15,8 +15,17 @@ describe('DiaVenda', () => {
   });
 
   it('recusa dia útil e data repetida', () => {
-    expect(() => validarNovaData('2026-10-05', [])).toThrow('sábado ou um domingo');
+    expect(() => validarNovaData('2026-10-05', [])).toThrow('sábado ou domingo');
     expect(() => validarNovaData('2026-10-04', ['2026-10-04'])).toThrow(ErroDeDominio);
     expect(() => validarNovaData('2026-10-10', [])).not.toThrow();
+  });
+});
+
+describe('DiaVenda com dias configurados', () => {
+  it('aceita e sugere só os dias de venda do estabelecimento', () => {
+    const uteis = [1, 2, 3, 4, 5];
+    expect(() => validarNovaData('2026-10-05', [], uteis)).not.toThrow();
+    expect(() => validarNovaData('2026-10-04', [], uteis)).toThrow('segunda, terça, quarta, quinta ou sexta');
+    expect(sugerirProximaData('2026-10-03', ['2026-10-05'], uteis)).toBe('2026-10-06');
   });
 });

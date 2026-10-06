@@ -1,6 +1,24 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, integer, pgSequence, pgTable, primaryKey, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
+/** Uma linha só (id = 1) com o que muda de um estabelecimento para outro. Sem linha, valem os padrões. */
+export const configuracao = pgTable(
+  'configuracao',
+  {
+    id: integer('id').primaryKey().default(1),
+    nomeEstabelecimento: text('nome_estabelecimento').notNull(),
+    corPrincipal: text('cor_principal').notNull(),
+    logoUrl: text('logo_url'),
+    enderecoRetirada: text('endereco_retirada'),
+    diasDeVenda: integer('dias_de_venda').array().notNull(),
+    limiteAtencao: integer('limite_atencao').notNull(),
+    formasDePagamento: text('formas_de_pagamento').array().notNull(),
+    mensagemWhatsapp: text('mensagem_whatsapp').notNull(),
+    atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check('configuracao_uma_linha', sql`${t.id} = 1`)],
+);
+
 /**
  * Banco do Expresso café. O dia de venda é o centro: pedidos, produção, lista de espera
  * e fechamento pertencem a um dia. Dinheiro sempre em centavos (integer).

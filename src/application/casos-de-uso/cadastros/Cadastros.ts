@@ -2,12 +2,28 @@ import { type Dinheiro, somar } from '../../../domain/compartilhado/Dinheiro.js'
 import { type Pedido, totalDoPedido } from '../../../domain/pedido/Pedido.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { existir } from '../../../domain/compartilhado/naoEncontrado.js';
+import { CONFIGURACAO_PADRAO, type Configuracao, validarConfiguracao } from '../../../domain/configuracao/Configuracao.js';
 import { garantirAberto } from '../../../domain/dia-venda/DiaVenda.js';
 import type { EntradaEspera } from '../../../domain/lista-espera/EntradaEspera.js';
 import type { Produto } from '../../../domain/produto/Produto.js';
 import type { ClienteEncontrado } from '../../portas/repositorios.js';
 import type { HashDeSenha, PublicadorDeEventos, UnidadeDeTrabalho } from '../../portas/servicos.js';
 import type { Usuario } from '../../portas/repositorios.js';
+
+/** O que muda de um estabelecimento para outro: marca, dias de venda, pagamentos, mensagem. */
+export class Configuracoes {
+  constructor(private readonly uow: UnidadeDeTrabalho) {}
+
+  async obter(): Promise<Configuracao> {
+    return (await this.uow.leitura.configuracao.obter()) ?? CONFIGURACAO_PADRAO;
+  }
+
+  async salvar(nova: Configuracao): Promise<Configuracao> {
+    const limpa = validarConfiguracao(nova);
+    await this.uow.executar((r) => r.configuracao.salvar(limpa));
+    return limpa;
+  }
+}
 
 /** Produtos e preços. Mudar o preço não mexe em pedidos já feitos: cada item guarda o preço da época. */
 export class Produtos {

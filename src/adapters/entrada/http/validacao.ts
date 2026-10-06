@@ -18,6 +18,16 @@ const itens = z.array(z.object({ produtoId: id, quantidade: inteiro.min(0) })).m
 
 export const esquemas = {
   entrar: z.object({ email: z.string(), senha: z.string() }),
+  configuracao: z.object({
+    nomeEstabelecimento: z.string(),
+    corPrincipal: z.string(),
+    logoUrl: z.string().max(500).optional(),
+    enderecoRetirada: z.string().max(200).optional(),
+    diasDeVenda: z.array(z.number().int().min(0).max(6)).max(7),
+    limiteAtencao: z.number().int(),
+    formasDePagamento: z.array(z.enum(['pix', 'dinheiro', 'cartao'])).max(3),
+    mensagemWhatsapp: z.string(),
+  }),
   novoUsuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }),
   mudarSenha: z.object({ senhaAtual: z.string(), novaSenha: z.string().max(200) }),
   novoPedido: z.object({ cliente, itens }),

@@ -4,6 +4,7 @@ import type {
   AlteracaoProducao,
   ClienteEncontrado,
   ClienteRepo,
+  ConfiguracaoRepo,
   DiaFechado,
   DiaRepo,
   EsperaRepo,
@@ -18,6 +19,7 @@ import type {
   UsuarioRepo,
 } from '../../../application/portas/repositorios.js';
 import { centavos, type Dinheiro } from '../../../domain/compartilhado/Dinheiro.js';
+import type { Configuracao, FormaDePagamento } from '../../../domain/configuracao/Configuracao.js';
 import type { DiaVenda } from '../../../domain/dia-venda/DiaVenda.js';
 import type { EstoqueDoProduto } from '../../../domain/disponibilidade/Disponibilidade.js';
 import type { FechamentoDoProduto } from '../../../domain/fechamento/Fechamento.js';
@@ -518,8 +520,43 @@ function ehUuid(id: string) {
   return UUID.test(id);
 }
 
+class ConfiguracaoPg implements ConfiguracaoRepo {
+  constructor(private readonly db: Banco) {}
+
+  async obter(): Promise<Configuracao | null> {
+    const [c] = await this.db.select().from(t.configuracao).where(eq(t.configuracao.id, 1));
+    if (!c) return null;
+    return {
+      nomeEstabelecimento: c.nomeEstabelecimento,
+      corPrincipal: c.corPrincipal,
+      ...(c.logoUrl && { logoUrl: c.logoUrl }),
+      ...(c.enderecoRetirada && { enderecoRetirada: c.enderecoRetirada }),
+      diasDeVenda: c.diasDeVenda,
+      limiteAtencao: c.limiteAtencao,
+      formasDePagamento: c.formasDePagamento as FormaDePagamento[],
+      mensagemWhatsapp: c.mensagemWhatsapp,
+    };
+  }
+
+  async salvar(c: Configuracao) {
+    const valores = {
+      nomeEstabelecimento: c.nomeEstabelecimento,
+      corPrincipal: c.corPrincipal,
+      logoUrl: c.logoUrl ?? null,
+      enderecoRetirada: c.enderecoRetirada ?? null,
+      diasDeVenda: [...c.diasDeVenda],
+      limiteAtencao: c.limiteAtencao,
+      formasDePagamento: [...c.formasDePagamento],
+      mensagemWhatsapp: c.mensagemWhatsapp,
+      atualizadoEm: new Date(),
+    };
+    await this.db.insert(t.configuracao).values({ id: 1, ...valores }).onConflictDoUpdate({ target: t.configuracao.id, set: valores });
+  }
+}
+
 export function repositoriosPg(db: Banco): Repositorios {
   return {
+    configuracao: new ConfiguracaoPg(db),
     usuarios: new UsuariosPg(db),
     produtos: new ProdutosPg(db),
     dias: new DiasPg(db),

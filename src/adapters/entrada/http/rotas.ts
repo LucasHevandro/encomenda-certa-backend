@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Req, Res, Sse } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { interval, map, merge, type Observable } from 'rxjs';
-import { Acesso, Clientes, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
+import { Acesso, Clientes, Configuracoes, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
 import { Dias } from '../../../application/casos-de-uso/dias/Dias.js';
 import { Pedidos } from '../../../application/casos-de-uso/pedidos/Pedidos.js';
 import { Producao } from '../../../application/casos-de-uso/producao/Producao.js';
@@ -203,7 +203,20 @@ export class CadastrosRotas {
     @Inject(Clientes) private readonly clientes: Clientes,
     @Inject(Espera) private readonly espera: Espera,
     @Inject(Acesso) private readonly acesso: Acesso,
+    @Inject(Configuracoes) private readonly configuracoes: Configuracoes,
   ) {}
+
+  /** Pública: a tela de login já mostra o nome e a cor do estabelecimento. */
+  @Publico()
+  @Get('configuracao')
+  obterConfiguracao() {
+    return this.configuracoes.obter();
+  }
+
+  @Put('configuracao')
+  salvarConfiguracao(@Body() corpo: unknown) {
+    return this.configuracoes.salvar(validar(esquemas.configuracao, corpo));
+  }
 
   @Get('usuarios')
   listarUsuarios() {

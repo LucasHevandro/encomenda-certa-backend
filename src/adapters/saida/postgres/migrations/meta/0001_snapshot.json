@@ -1,0 +1,919 @@
+{
+  "id": "c6f72d11-cba7-484a-a1a3-2d6094d67ab2",
+  "prevId": "6ca73452-b54d-4978-910c-605b64e2185c",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.cliente": {
+      "name": "cliente",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "cliente_telefone_unique": {
+          "name": "cliente_telefone_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "telefone"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.configuracao": {
+      "name": "configuracao",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "default": 1
+        },
+        "nome_estabelecimento": {
+          "name": "nome_estabelecimento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cor_principal": {
+          "name": "cor_principal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "endereco_retirada": {
+          "name": "endereco_retirada",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dias_de_venda": {
+          "name": "dias_de_venda",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "limite_atencao": {
+          "name": "limite_atencao",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "formas_de_pagamento": {
+          "name": "formas_de_pagamento",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mensagem_whatsapp": {
+          "name": "mensagem_whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "atualizado_em": {
+          "name": "atualizado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "configuracao_uma_linha": {
+          "name": "configuracao_uma_linha",
+          "value": "\"configuracao\".\"id\" = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.dia_venda": {
+      "name": "dia_venda",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "data": {
+          "name": "data",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aberto'"
+        },
+        "fechado_em": {
+          "name": "fechado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "faturamento": {
+          "name": "faturamento",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dia_venda_data_unique": {
+          "name": "dia_venda_data_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "data"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "dia_venda_status": {
+          "name": "dia_venda_status",
+          "value": "\"dia_venda\".\"status\" in ('aberto', 'encerrado')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.fechamento_produto": {
+      "name": "fechamento_produto",
+      "schema": "",
+      "columns": {
+        "dia_id": {
+          "name": "dia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produto_id": {
+          "name": "produto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produzidos": {
+          "name": "produzidos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reservados": {
+          "name": "reservados",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retirados": {
+          "name": "retirados",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nao_retirados": {
+          "name": "nao_retirados",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sobras": {
+          "name": "sobras",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fechamento_produto_dia_id_dia_venda_id_fk": {
+          "name": "fechamento_produto_dia_id_dia_venda_id_fk",
+          "tableFrom": "fechamento_produto",
+          "tableTo": "dia_venda",
+          "columnsFrom": [
+            "dia_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "fechamento_produto_produto_id_produto_id_fk": {
+          "name": "fechamento_produto_produto_id_produto_id_fk",
+          "tableFrom": "fechamento_produto",
+          "tableTo": "produto",
+          "columnsFrom": [
+            "produto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "fechamento_produto_dia_id_produto_id_pk": {
+          "name": "fechamento_produto_dia_id_produto_id_pk",
+          "columns": [
+            "dia_id",
+            "produto_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lista_espera": {
+      "name": "lista_espera",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dia_id": {
+          "name": "dia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produto_id": {
+          "name": "produto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cliente_id": {
+          "name": "cliente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantidade": {
+          "name": "quantidade",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posicao": {
+          "name": "posicao",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aguardando'"
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "lista_espera_dia_id_dia_venda_id_fk": {
+          "name": "lista_espera_dia_id_dia_venda_id_fk",
+          "tableFrom": "lista_espera",
+          "tableTo": "dia_venda",
+          "columnsFrom": [
+            "dia_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "lista_espera_produto_id_produto_id_fk": {
+          "name": "lista_espera_produto_id_produto_id_fk",
+          "tableFrom": "lista_espera",
+          "tableTo": "produto",
+          "columnsFrom": [
+            "produto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "lista_espera_cliente_id_cliente_id_fk": {
+          "name": "lista_espera_cliente_id_cliente_id_fk",
+          "tableFrom": "lista_espera",
+          "tableTo": "cliente",
+          "columnsFrom": [
+            "cliente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "lista_espera_quantidade": {
+          "name": "lista_espera_quantidade",
+          "value": "\"lista_espera\".\"quantidade\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pedido": {
+      "name": "pedido",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "numero": {
+          "name": "numero",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "nextval('pedido_numero_seq')"
+        },
+        "dia_id": {
+          "name": "dia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cliente_id": {
+          "name": "cliente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retirada": {
+          "name": "retirada",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'reservado'"
+        },
+        "pagamento": {
+          "name": "pagamento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendente'"
+        },
+        "criado_por": {
+          "name": "criado_por",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retirado_por": {
+          "name": "retirado_por",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retirado_em": {
+          "name": "retirado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelado_por": {
+          "name": "cancelado_por",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelado_em": {
+          "name": "cancelado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pedido_dia_id_dia_venda_id_fk": {
+          "name": "pedido_dia_id_dia_venda_id_fk",
+          "tableFrom": "pedido",
+          "tableTo": "dia_venda",
+          "columnsFrom": [
+            "dia_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pedido_cliente_id_cliente_id_fk": {
+          "name": "pedido_cliente_id_cliente_id_fk",
+          "tableFrom": "pedido",
+          "tableTo": "cliente",
+          "columnsFrom": [
+            "cliente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pedido_criado_por_usuario_id_fk": {
+          "name": "pedido_criado_por_usuario_id_fk",
+          "tableFrom": "pedido",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "criado_por"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pedido_retirado_por_usuario_id_fk": {
+          "name": "pedido_retirado_por_usuario_id_fk",
+          "tableFrom": "pedido",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "retirado_por"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pedido_cancelado_por_usuario_id_fk": {
+          "name": "pedido_cancelado_por_usuario_id_fk",
+          "tableFrom": "pedido",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "cancelado_por"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pedido_numero_unique": {
+          "name": "pedido_numero_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "numero"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "pedido_retirada": {
+          "name": "pedido_retirada",
+          "value": "\"pedido\".\"retirada\" in ('reservado', 'retirado', 'cancelado')"
+        },
+        "pedido_pagamento": {
+          "name": "pedido_pagamento",
+          "value": "\"pedido\".\"pagamento\" in ('pendente', 'pix', 'dinheiro', 'cartao')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pedido_item": {
+      "name": "pedido_item",
+      "schema": "",
+      "columns": {
+        "pedido_id": {
+          "name": "pedido_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produto_id": {
+          "name": "produto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantidade": {
+          "name": "quantidade",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preco_unitario": {
+          "name": "preco_unitario",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pedido_item_pedido_id_pedido_id_fk": {
+          "name": "pedido_item_pedido_id_pedido_id_fk",
+          "tableFrom": "pedido_item",
+          "tableTo": "pedido",
+          "columnsFrom": [
+            "pedido_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "pedido_item_produto_id_produto_id_fk": {
+          "name": "pedido_item_produto_id_produto_id_fk",
+          "tableFrom": "pedido_item",
+          "tableTo": "produto",
+          "columnsFrom": [
+            "produto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pedido_item_pedido_id_produto_id_pk": {
+          "name": "pedido_item_pedido_id_produto_id_pk",
+          "columns": [
+            "pedido_id",
+            "produto_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pedido_item_quantidade": {
+          "name": "pedido_item_quantidade",
+          "value": "\"pedido_item\".\"quantidade\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.producao": {
+      "name": "producao",
+      "schema": "",
+      "columns": {
+        "dia_id": {
+          "name": "dia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produto_id": {
+          "name": "produto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantidade": {
+          "name": "quantidade",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "producao_dia_id_dia_venda_id_fk": {
+          "name": "producao_dia_id_dia_venda_id_fk",
+          "tableFrom": "producao",
+          "tableTo": "dia_venda",
+          "columnsFrom": [
+            "dia_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "producao_produto_id_produto_id_fk": {
+          "name": "producao_produto_id_produto_id_fk",
+          "tableFrom": "producao",
+          "tableTo": "produto",
+          "columnsFrom": [
+            "produto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "producao_dia_id_produto_id_pk": {
+          "name": "producao_dia_id_produto_id_pk",
+          "columns": [
+            "dia_id",
+            "produto_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "producao_nao_negativa": {
+          "name": "producao_nao_negativa",
+          "value": "\"producao\".\"quantidade\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.producao_alteracao": {
+      "name": "producao_alteracao",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "dia_id": {
+          "name": "dia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "produto_id": {
+          "name": "produto_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "de": {
+          "name": "de",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "para": {
+          "name": "para",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "em": {
+          "name": "em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "producao_alteracao_dia_id_dia_venda_id_fk": {
+          "name": "producao_alteracao_dia_id_dia_venda_id_fk",
+          "tableFrom": "producao_alteracao",
+          "tableTo": "dia_venda",
+          "columnsFrom": [
+            "dia_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "producao_alteracao_produto_id_produto_id_fk": {
+          "name": "producao_alteracao_produto_id_produto_id_fk",
+          "tableFrom": "producao_alteracao",
+          "tableTo": "produto",
+          "columnsFrom": [
+            "produto_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "producao_alteracao_usuario_id_usuario_id_fk": {
+          "name": "producao_alteracao_usuario_id_usuario_id_fk",
+          "tableFrom": "producao_alteracao",
+          "tableTo": "usuario",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.produto": {
+      "name": "produto",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preco_atual": {
+          "name": "preco_atual",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "produto_preco_positivo": {
+          "name": "produto_preco_positivo",
+          "value": "\"produto\".\"preco_atual\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.usuario": {
+      "name": "usuario",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "senha_hash": {
+          "name": "senha_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criado_em": {
+          "name": "criado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "usuario_email_unique": {
+          "name": "usuario_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {
+    "public.pedido_numero_seq": {
+      "name": "pedido_numero_seq",
+      "schema": "public",
+      "increment": "1",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "9223372036854775807",
+      "cache": "1",
+      "cycle": false
+    }
+  },
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
