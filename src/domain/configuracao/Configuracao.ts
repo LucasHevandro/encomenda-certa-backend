@@ -26,7 +26,7 @@ export const FORMAS_DE_PAGAMENTO: readonly FormaDePagamento[] = ['pix', 'dinheir
 export const CAMPOS_DA_MENSAGEM = ['cliente', 'numero', 'itens', 'total', 'data', 'estabelecimento', 'endereco'] as const;
 
 export const CONFIGURACAO_PADRAO: Configuracao = {
-  nomeEstabelecimento: 'Expresso café',
+  nomeEstabelecimento: 'Encomenda Certa',
   corPrincipal: '#b5441a',
   diasDeVenda: [6, 0],
   limiteAtencao: 3,

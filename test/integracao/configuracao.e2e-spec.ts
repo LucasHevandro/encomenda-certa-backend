@@ -14,7 +14,7 @@ describe('configurações do estabelecimento', () => {
 
   it('sem nada salvo valem os padrões, e qualquer um pode ler (a tela de login usa)', async () => {
     const { body } = await request(amb.app.getHttpServer()).get('/configuracao').expect(200);
-    expect(body).toMatchObject({ nomeEstabelecimento: 'Expresso café', diasDeVenda: [6, 0], limiteAtencao: 3, formasDePagamento: ['pix', 'dinheiro', 'cartao'] });
+    expect(body).toMatchObject({ nomeEstabelecimento: 'Encomenda Certa', diasDeVenda: [6, 0], limiteAtencao: 3, formasDePagamento: ['pix', 'dinheiro', 'cartao'] });
     await request(amb.app.getHttpServer()).put('/configuracao').send(body).expect(401);
   });
 

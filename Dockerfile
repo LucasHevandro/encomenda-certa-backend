@@ -1,4 +1,4 @@
-# API do Expresso café para produção (Railway ou qualquer lugar que rode Docker).
+# API do Encomenda Certa para produção (Railway ou qualquer lugar que rode Docker).
 FROM node:24-alpine AS base
 WORKDIR /app
 RUN corepack enable

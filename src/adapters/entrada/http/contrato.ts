@@ -288,7 +288,7 @@ export function gerarOpenApi() {
 
   return {
     openapi: '3.0.3',
-    info: { title: 'Expresso café — API', version: '1.0.0', description: 'Dinheiro em centavos. Sessão por cookie httpOnly.' },
+    info: { title: 'Encomenda Certa — API', version: '1.0.0', description: 'Dinheiro em centavos. Sessão por cookie httpOnly.' },
     components: { schemas, securitySchemes: { cookie: { type: 'apiKey', in: 'cookie', name: 'expresso_sessao' } } },
     security: [{ cookie: [] }],
     paths,

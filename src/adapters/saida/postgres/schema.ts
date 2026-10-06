@@ -33,7 +33,7 @@ export const configuracao = pgTable('configuracao', {
 });
 
 /**
- * Banco do Expresso café. O dia de venda é o centro: pedidos, produção, lista de espera
+ * Banco do Encomenda Certa. O dia de venda é o centro: pedidos, produção, lista de espera
  * e fechamento pertencem a um dia. Dinheiro sempre em centavos (integer).
  */
 

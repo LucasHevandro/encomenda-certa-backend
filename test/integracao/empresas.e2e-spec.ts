@@ -101,7 +101,7 @@ describe('empresas', () => {
 
   it('sem login, a configuração vem com os padrões', async () => {
     const { body } = await request(amb.app.getHttpServer()).get('/configuracao').expect(200);
-    expect(body.nomeEstabelecimento).toBe('Expresso café');
+    expect(body.nomeEstabelecimento).toBe('Encomenda Certa');
   });
 
   it('recusa empresa sem nome e e-mail que já existe', async () => {

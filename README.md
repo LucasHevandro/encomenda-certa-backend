@@ -1,6 +1,6 @@
-# Expresso café — API
+# Encomenda Certa — API
 
-API do Expresso café: NestJS, Drizzle e PostgreSQL, em arquitetura hexagonal. A regra central mora aqui: **nunca reservar mais do que foi produzido**, nem com dois aparelhos pedindo o último frango no mesmo segundo.
+API do Encomenda Certa, para vários estabelecimentos: NestJS, Drizzle e PostgreSQL, em arquitetura hexagonal. A regra central mora aqui: **nunca reservar mais do que foi produzido**, nem com dois aparelhos pedindo o último item no mesmo segundo.
 
 ## Rodar
 
