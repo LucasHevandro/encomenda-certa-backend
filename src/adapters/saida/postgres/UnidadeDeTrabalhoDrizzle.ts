@@ -9,7 +9,7 @@ import * as schema from './schema.js';
 /** Violação de unicidade que pode acontecer numa corrida: vira erro do balcão. */
 function traduzirErroDoBanco(erro: unknown): unknown {
   const causa = (erro as { cause?: { code?: string; constraint?: string } })?.cause ?? (erro as { code?: string; constraint?: string });
-  if (causa?.code === '23505' && causa.constraint === 'dia_venda_data_unique') {
+  if (causa?.code === '23505' && causa.constraint === 'dia_venda_empresa_data') {
     return new ErroDeDominio('dia-ja-existe', 'Já existe um dia de venda nessa data.');
   }
   if (causa?.code === '23505' && causa.constraint === 'usuario_email_unique') {

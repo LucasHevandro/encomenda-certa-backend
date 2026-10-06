@@ -6,15 +6,17 @@ import { CONFIGURACAO_PADRAO, type Configuracao, validarConfiguracao } from '../
 import { garantirAberto } from '../../../domain/dia-venda/DiaVenda.js';
 import type { EntradaEspera } from '../../../domain/lista-espera/EntradaEspera.js';
 import type { Produto } from '../../../domain/produto/Produto.js';
-import type { ClienteEncontrado } from '../../portas/repositorios.js';
+import type { ClienteEncontrado, Empresa, Usuario } from '../../portas/repositorios.js';
 import type { HashDeSenha, PublicadorDeEventos, UnidadeDeTrabalho } from '../../portas/servicos.js';
-import type { Usuario } from '../../portas/repositorios.js';
+import { naEmpresa, temEmpresa } from '../../contextoDaEmpresa.js';
 
 /** O que muda de um estabelecimento para outro: marca, dias de venda, pagamentos, mensagem. */
 export class Configuracoes {
   constructor(private readonly uow: UnidadeDeTrabalho) {}
 
+  /** Sem login (tela de entrar) não há empresa: valem os padrões. */
   async obter(): Promise<Configuracao> {
+    if (!temEmpresa()) return CONFIGURACAO_PADRAO;
     return (await this.uow.leitura.configuracao.obter()) ?? CONFIGURACAO_PADRAO;
   }
 
@@ -143,7 +145,7 @@ export class Espera {
   }
 }
 
-/** Login por e-mail e senha; um usuário por pessoa, todos com as mesmas permissões. */
+/** Login por e-mail e senha; um usuário por pessoa, todos da empresa com as mesmas permissões. */
 export class Acesso {
   constructor(
     private readonly uow: UnidadeDeTrabalho,
@@ -156,26 +158,26 @@ export class Acesso {
     if (!usuario || !(await this.hash.conferir(senha, usuario.senhaHash))) {
       throw new ErroDeDominio('login-invalido', 'E-mail ou senha incorretos.');
     }
-    return { id: usuario.id, nome: usuario.nome, email: usuario.email };
+    if (!usuario.empresaAtiva) throw empresaInativa();
+    return { id: usuario.id, nome: usuario.nome, email: usuario.email, empresaId: usuario.empresaId };
   }
 
-  usuario(id: string): Promise<Usuario | null> {
-    return this.uow.leitura.usuarios.porId(id);
+  /** Para a guarda de sessão: null se a pessoa não existe mais; erro se a empresa foi desativada. */
+  async usuario(id: string): Promise<Usuario | null> {
+    const usuario = await this.uow.leitura.usuarios.porId(id);
+    if (!usuario) return null;
+    if (!usuario.empresaAtiva) throw empresaInativa();
+    return { id: usuario.id, nome: usuario.nome, email: usuario.email, empresaId: usuario.empresaId };
   }
 
   listarUsuarios(): Promise<Usuario[]> {
     return this.uow.leitura.usuarios.listar();
   }
 
-  /** Qualquer pessoa com acesso cria outra: todos têm as mesmas permissões. */
+  /** Qualquer pessoa com acesso cria outra na mesma empresa: todos têm as mesmas permissões. */
   async criarUsuario(nome: string, email: string, senha: string): Promise<Usuario> {
-    const nomeLimpo = nome.trim();
-    const emailLimpo = email.trim().toLowerCase();
-    if (nomeLimpo === '') throw new ErroDeDominio('usuario-sem-nome', 'Informe o nome da pessoa.');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) throw new ErroDeDominio('email-invalido', 'Informe um e-mail válido.');
-    validarSenha(senha);
-    const senhaHash = await this.hash.gerar(senha);
-    return this.uow.executar((r) => r.usuarios.criar({ nome: nomeLimpo, email: emailLimpo, senhaHash }));
+    const novo = await prepararUsuario(nome, email, senha, this.hash);
+    return this.uow.executar((r) => r.usuarios.criar(novo));
   }
 
   /** Troca a própria senha, conferindo a atual. */
@@ -187,6 +189,60 @@ export class Acesso {
     validarSenha(novaSenha);
     const hash = await this.hash.gerar(novaSenha);
     await this.uow.executar((r) => r.usuarios.mudarSenha(usuarioId, hash));
+  }
+}
+
+const empresaInativa = () => new ErroDeDominio('empresa-inativa', 'O acesso deste estabelecimento está desativado. Fale com o suporte.');
+
+/** Confere nome, e-mail e senha e devolve pronto para gravar, com a senha já em hash. */
+async function prepararUsuario(nome: string, email: string, senha: string, hash: HashDeSenha) {
+  const nomeLimpo = nome.trim();
+  const emailLimpo = email.trim().toLowerCase();
+  if (nomeLimpo === '') throw new ErroDeDominio('usuario-sem-nome', 'Informe o nome da pessoa.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLimpo)) throw new ErroDeDominio('email-invalido', 'Informe um e-mail válido.');
+  validarSenha(senha);
+  return { nome: nomeLimpo, email: emailLimpo, senhaHash: await hash.gerar(senha) };
+}
+
+export interface NovaEmpresa {
+  readonly nome: string;
+  /** Primeira pessoa com acesso; ela cadastra as outras pela tela Pessoas. */
+  readonly usuario: { readonly nome: string; readonly email: string; readonly senha: string };
+}
+
+/** Painel do administrador do sistema: cria empresas com o primeiro acesso e liga ou desliga cada uma. */
+export class Empresas {
+  constructor(
+    private readonly uow: UnidadeDeTrabalho,
+    private readonly hash: HashDeSenha,
+  ) {}
+
+  listar(): Promise<Empresa[]> {
+    return this.uow.leitura.empresas.listar();
+  }
+
+  /** Empresa, primeiro usuário e configuração com o nome dela, tudo junto ou nada. */
+  async criar(nova: NovaEmpresa): Promise<{ empresa: Empresa; usuario: Usuario }> {
+    const nome = nova.nome.trim();
+    if (nome === '' || nome.length > 60) throw new ErroDeDominio('empresa-sem-nome', 'Informe o nome do estabelecimento (até 60 letras).');
+    const usuario = await prepararUsuario(nova.usuario.nome, nova.usuario.email, nova.usuario.senha, this.hash);
+    return this.uow.executar(async (r) => {
+      const { id } = await r.empresas.criar(nome);
+      const criado = await r.empresas.criarUsuario(id, usuario);
+      await naEmpresa(id, () => r.configuracao.salvar({ ...CONFIGURACAO_PADRAO, nomeEstabelecimento: nome }));
+      return { empresa: existir(await r.empresas.obter(id), 'Empresa'), usuario: criado };
+    });
+  }
+
+  /** Desativada, ninguém da empresa entra, e quem estava logado cai na próxima ação. Os dados ficam guardados. */
+  async mudarAtiva(id: string, ativa: boolean): Promise<Empresa> {
+    return existir(await this.uow.executar((r) => r.empresas.mudarAtiva(id, ativa)), 'Empresa');
+  }
+
+  /** Administrador do sistema, sem empresa. Só pelo script admin:criar. */
+  async criarAdministrador(nome: string, email: string, senha: string): Promise<Usuario> {
+    const usuario = await prepararUsuario(nome, email, senha, this.hash);
+    return this.uow.executar((r) => r.empresas.criarAdministrador(usuario));
   }
 }
 

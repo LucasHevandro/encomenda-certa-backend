@@ -15,6 +15,13 @@
       "when": 1791247285205,
       "tag": "0001_configuracao",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791248316347,
+      "tag": "0002_multiempresa",
+      "breakpoints": true
     }
   ]
 }

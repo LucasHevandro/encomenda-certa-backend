@@ -33,7 +33,8 @@ describe('contrato da API', () => {
 
   it.each(leituras.map((r) => [r.caminho, r] as const))('GET %s', async (caminho, rota) => {
     const id = caminho.startsWith('/pedidos') ? ids.pedido : caminho.startsWith('/clientes') ? ids.cliente : ids.dia;
-    const { body } = await amb.logado.get(caminho.replace('{id}', id)).expect(200);
+    const agente = rota.administrador ? amb.admin : amb.logado;
+    const { body } = await agente.get(caminho.replace('{id}', id)).expect(200);
     const resultado = (rota.resposta as z.ZodType).safeParse(body);
     expect(resultado.success ? 'ok' : resultado.error.issues).toBe('ok');
   });
@@ -42,7 +43,7 @@ describe('contrato da API', () => {
     await amb.logado.get('/nao-existe').expect(404, { codigo: 'rota-inexistente', mensagem: 'Cannot GET /nao-existe' });
     for (const rota of ROTAS) {
       const caminho = rota.caminho.replace('{id}', '00000000-0000-0000-0000-000000000000');
-      const resposta = await amb.logado[rota.metodo](caminho).send(rota.corpo ? {} : undefined);
+      const resposta = await (rota.administrador ? amb.admin : amb.logado)[rota.metodo](caminho).send(rota.corpo ? {} : undefined);
       // Rota que não existe responde "rota-inexistente"; as que existem podem recusar os dados, mas não com esse código.
       expect(resposta.body?.codigo === 'rota-inexistente' ? `${rota.metodo} ${rota.caminho} não existe` : 'ok').toBe('ok');
     }

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Header, HttpCode, Inject, type MessageEvent, Param, Patch, Post, Put, Query, Req, Res, Sse } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { interval, map, merge, type Observable } from 'rxjs';
-import { Acesso, Clientes, Configuracoes, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
+import { from, interval, map, merge, type Observable, switchMap } from 'rxjs';
+import { Acesso, Clientes, Configuracoes, Empresas, Espera, Produtos } from '../../../application/casos-de-uso/cadastros/Cadastros.js';
 import { Dias } from '../../../application/casos-de-uso/dias/Dias.js';
 import { Pedidos } from '../../../application/casos-de-uso/pedidos/Pedidos.js';
 import { Producao } from '../../../application/casos-de-uso/producao/Producao.js';
@@ -11,10 +11,13 @@ import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { LimiteDeTentativas } from './limiteDeTentativas.js';
 import { PublicadorSSE } from '../../saida/servicos.js';
 import { gerarOpenApi } from './contrato.js';
-import { CookieDeSessao, Publico, UsuarioLogado } from './sessao.js';
+import { CookieDeSessao, ParaTodos, Publico, SoAdministrador, UsuarioLogado } from './sessao.js';
 import { esquemas, validar } from './validacao.js';
 
 /** Rotas finas: validam a entrada e chamam um caso de uso. A API espelha as ações do guia. */
+
+/** O que a API mostra de uma pessoa: a empresa fica por conta da sessão. */
+const paraResposta = (u: Usuario) => ({ id: u.id, nome: u.nome, email: u.email, administrador: u.empresaId === null });
 
 @Controller('sessao')
 export class SessaoRotas {
@@ -36,18 +39,20 @@ export class SessaoRotas {
       const usuario = await this.acesso.entrar(email, senha);
       this.limite.registrarAcerto(chave);
       this.cookie.gravar(resposta, usuario.id);
-      return usuario;
+      return paraResposta(usuario);
     } catch (erro) {
       if (erro instanceof ErroDeDominio && erro.codigo === 'login-invalido') this.limite.registrarErro(chave);
       throw erro;
     }
   }
 
+  @ParaTodos()
   @Get()
   atual(@UsuarioLogado() usuario: Usuario) {
-    return usuario;
+    return paraResposta(usuario);
   }
 
+  @ParaTodos()
   @Put('senha')
   @HttpCode(204)
   async mudarSenha(@Body() corpo: unknown, @UsuarioLogado() usuario: Usuario) {
@@ -150,9 +155,14 @@ export class DiasRotas {
   @Header('Cache-Control', 'no-cache, no-transform')
   @Header('X-Accel-Buffering', 'no')
   eventosDoDia(@Param('id') id: string): Observable<MessageEvent> {
-    return merge(
-      this.eventos.doDia(id).pipe(map((evento): MessageEvent => ({ type: evento.tipo, data: evento }))),
-      interval(25_000).pipe(map((): MessageEvent => ({ type: 'manter-conexao', data: {} }))),
+    // Só escuta dia da própria empresa: a conferência roda aqui, ainda no contexto da requisição.
+    return from(this.dias.painel(id)).pipe(
+      switchMap(() =>
+        merge(
+          this.eventos.doDia(id).pipe(map((evento): MessageEvent => ({ type: evento.tipo, data: evento }))),
+          interval(25_000).pipe(map((): MessageEvent => ({ type: 'manter-conexao', data: {} }))),
+        ),
+      ),
     );
   }
 }
@@ -219,14 +229,14 @@ export class CadastrosRotas {
   }
 
   @Get('usuarios')
-  listarUsuarios() {
-    return this.acesso.listarUsuarios();
+  async listarUsuarios() {
+    return (await this.acesso.listarUsuarios()).map(paraResposta);
   }
 
   @Post('usuarios')
-  criarUsuario(@Body() corpo: unknown) {
+  async criarUsuario(@Body() corpo: unknown) {
     const { nome, email, senha } = validar(esquemas.novoUsuario, corpo);
-    return this.acesso.criarUsuario(nome, email, senha);
+    return paraResposta(await this.acesso.criarUsuario(nome, email, senha));
   }
 
   @Get('produtos')
@@ -273,5 +283,28 @@ export class CadastrosRotas {
   @Get('saude')
   saude() {
     return { ok: true };
+  }
+}
+
+/** Painel do administrador do sistema: empresas e o primeiro acesso de cada uma. */
+@SoAdministrador()
+@Controller('admin/empresas')
+export class AdminRotas {
+  constructor(@Inject(Empresas) private readonly empresas: Empresas) {}
+
+  @Get()
+  listar() {
+    return this.empresas.listar();
+  }
+
+  @Post()
+  async criar(@Body() corpo: unknown) {
+    const { empresa, usuario } = await this.empresas.criar(validar(esquemas.novaEmpresa, corpo));
+    return { empresa, usuario: paraResposta(usuario) };
+  }
+
+  @Patch(':id')
+  mudar(@Param('id') id: string, @Body() corpo: unknown) {
+    return this.empresas.mudarAtiva(id, validar(esquemas.mudarEmpresa, corpo).ativa);
   }
 }

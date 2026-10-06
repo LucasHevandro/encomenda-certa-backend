@@ -37,7 +37,15 @@ export const Configuracao = z
   })
   .meta({ id: 'Configuracao' });
 
-export const Usuario = z.object({ id: z.string(), nome: z.string(), email: z.string() }).meta({ id: 'Usuario' });
+export const Usuario = z
+  .object({ id: z.string(), nome: z.string(), email: z.string(), administrador: z.boolean().describe('Administrador do sistema: só usa o painel de empresas') })
+  .meta({ id: 'Usuario' });
+
+export const Empresa = z
+  .object({ id: z.string(), nome: z.string(), ativa: z.boolean(), criadaEm: z.string(), usuarios: z.number().int().describe('Pessoas com acesso') })
+  .meta({ id: 'Empresa' });
+
+export const EmpresaCriada = z.object({ empresa: Empresa, usuario: Usuario }).meta({ id: 'EmpresaCriada' });
 
 export const Produto = z.object({ id: z.string(), nome: z.string(), preco: centavos, ativo: z.boolean() }).meta({ id: 'Produto' });
 
@@ -173,6 +181,8 @@ const corpos = {
   MudarProduto: esquemas.mudarProduto,
   NovaEspera: esquemas.novaEspera,
   MudarEspera: esquemas.mudarEspera,
+  NovaEmpresa: esquemas.novaEmpresa,
+  MudarEmpresa: esquemas.mudarEmpresa,
 } as const;
 // .meta() devolve uma cópia; para dar nome ao próprio esquema usado na validação, registra direto.
 for (const [id, esquema] of Object.entries(corpos)) z.globalRegistry.add(esquema, { id });
@@ -187,6 +197,8 @@ interface Rota {
   resposta?: z.ZodType;
   status?: number;
   publica?: boolean;
+  /** Só o administrador do sistema. */
+  administrador?: boolean;
   query?: Record<string, string>;
 }
 
@@ -196,7 +208,7 @@ export const ROTAS: Rota[] = [
   { metodo: 'get', caminho: '/sessao', resumo: 'Quem está logado', resposta: Usuario },
   { metodo: 'put', caminho: '/sessao/senha', resumo: 'Trocar a própria senha', corpo: esquemas.mudarSenha },
   { metodo: 'delete', caminho: '/sessao', resumo: 'Sair', publica: true },
-  { metodo: 'get', caminho: '/configuracao', resumo: 'Configurações do estabelecimento', resposta: Configuracao, publica: true },
+  { metodo: 'get', caminho: '/configuracao', resumo: 'Configurações do estabelecimento (sem login, os padrões)', resposta: Configuracao, publica: true },
   { metodo: 'put', caminho: '/configuracao', resumo: 'Salvar configurações', corpo: esquemas.configuracao, resposta: Configuracao },
   { metodo: 'get', caminho: '/usuarios', resumo: 'Pessoas com acesso', resposta: z.array(Usuario) },
   { metodo: 'post', caminho: '/usuarios', resumo: 'Dar acesso a alguém', corpo: esquemas.novoUsuario, resposta: Usuario, status: 201 },
@@ -226,6 +238,17 @@ export const ROTAS: Rota[] = [
   { metodo: 'get', caminho: '/clientes', resumo: 'Clientes (com ?telefone=, no máximo um)', resposta: z.array(ClienteEncontrado), query: { telefone: 'Só dígitos, com DDD' } },
   { metodo: 'get', caminho: '/clientes/{id}', resumo: 'Histórico do cliente', resposta: HistoricoDoCliente },
   { metodo: 'patch', caminho: '/espera/{id}', resumo: 'Atendido ou desistiu', corpo: esquemas.mudarEspera, resposta: EntradaEspera },
+  { metodo: 'get', caminho: '/admin/empresas', resumo: 'Empresas (administrador)', resposta: z.array(Empresa), administrador: true },
+  {
+    metodo: 'post',
+    caminho: '/admin/empresas',
+    resumo: 'Criar empresa com o primeiro acesso (administrador)',
+    corpo: esquemas.novaEmpresa,
+    resposta: EmpresaCriada,
+    status: 201,
+    administrador: true,
+  },
+  { metodo: 'patch', caminho: '/admin/empresas/{id}', resumo: 'Ativar ou desativar empresa (administrador)', corpo: esquemas.mudarEmpresa, resposta: Empresa, administrador: true },
 ];
 
 /** OpenAPI 3.0 montado a partir dos esquemas Zod. */

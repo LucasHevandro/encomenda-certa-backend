@@ -7,18 +7,34 @@ import type { EntradaEspera } from '../../domain/lista-espera/EntradaEspera.js';
 import type { ClienteDoPedido, Pagamento, Pedido, Retirada } from '../../domain/pedido/Pedido.js';
 import type { Produto } from '../../domain/produto/Produto.js';
 
-/** Portas de saída: o que os casos de uso precisam guardar e ler. O adaptador Postgres implementa. */
+/**
+ * Portas de saída: o que os casos de uso precisam guardar e ler. O adaptador Postgres implementa.
+ * Tudo o que pertence a um estabelecimento é lido e gravado na empresa do contexto (contextoDaEmpresa);
+ * só usuários (login) e empresas (painel do administrador) enxergam além dela.
+ */
 
 export interface Usuario {
   readonly id: string;
   readonly nome: string;
   readonly email: string;
+  /** null: administrador do sistema, que só usa o painel de empresas. */
+  readonly empresaId: string | null;
+}
+
+/** Usuário com a situação da empresa, para o login e a guarda de sessão. */
+export interface UsuarioComEmpresa extends Usuario {
+  /** Sempre true para o administrador. */
+  readonly empresaAtiva: boolean;
 }
 
 export interface UsuarioRepo {
-  porEmail(email: string): Promise<(Usuario & { senhaHash: string }) | null>;
-  porId(id: string): Promise<Usuario | null>;
+  /** Em qualquer empresa: o e-mail é único no sistema todo. */
+  porEmail(email: string): Promise<(UsuarioComEmpresa & { senhaHash: string }) | null>;
+  /** Em qualquer empresa: é a guarda de sessão que descobre a empresa por aqui. */
+  porId(id: string): Promise<UsuarioComEmpresa | null>;
+  /** Cria na empresa do contexto. */
   criar(usuario: { nome: string; email: string; senhaHash: string }): Promise<Usuario>;
+  /** Pessoas da empresa do contexto. */
   listar(): Promise<Usuario[]>;
   senhaHash(id: string): Promise<string | null>;
   mudarSenha(id: string, senhaHash: string): Promise<void>;
@@ -142,7 +158,28 @@ export interface ConfiguracaoRepo {
   salvar(configuracao: Configuracao): Promise<void>;
 }
 
+export interface Empresa {
+  readonly id: string;
+  readonly nome: string;
+  readonly ativa: boolean;
+  readonly criadaEm: string;
+  readonly usuarios: number;
+}
+
+/** Só o painel do administrador usa: enxerga todas as empresas. */
+export interface EmpresaRepo {
+  listar(): Promise<Empresa[]>;
+  obter(id: string): Promise<Empresa | null>;
+  criar(nome: string): Promise<Empresa>;
+  mudarAtiva(id: string, ativa: boolean): Promise<Empresa | null>;
+  /** Primeiro usuário da empresa, criado pelo administrador. */
+  criarUsuario(empresaId: string, usuario: { nome: string; email: string; senhaHash: string }): Promise<Usuario>;
+  /** Administrador do sistema (sem empresa), criado pelo script admin:criar. */
+  criarAdministrador(usuario: { nome: string; email: string; senhaHash: string }): Promise<Usuario>;
+}
+
 export interface Repositorios {
+  readonly empresas: EmpresaRepo;
   readonly configuracao: ConfiguracaoRepo;
   readonly usuarios: UsuarioRepo;
   readonly produtos: ProdutoRepo;

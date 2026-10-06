@@ -25,13 +25,13 @@ O navegador só fala com a Vercel. Ela repassa `/api/...` para o Railway, então
    Não defina `PORT`: o Railway informa sozinho.
 4. Em **Settings > Networking**, clique em **Generate Domain**. Anote o endereço, por exemplo `https://expresso-cafe-api.up.railway.app`.
 5. As migrações rodam sozinhas quando a API sobe. Confira em `https://SEU-ENDERECO/saude` (deve responder `{"ok":true}`).
-6. Crie o primeiro acesso, uma vez só, da sua máquina. No PostgreSQL do Railway, aba **Variables**, copie `DATABASE_PUBLIC_URL`. Na pasta do backend, no PowerShell:
+6. Crie o administrador do sistema, uma vez só, da sua máquina. No PostgreSQL do Railway, aba **Variables**, copie `DATABASE_PUBLIC_URL`. Na pasta do backend, no PowerShell:
 
    ```powershell
-   $env:DATABASE_URL = "cole-aqui-a-DATABASE_PUBLIC_URL"; pnpm usuario:criar "Seu nome" voce@exemplo.com uma-senha-forte
+   $env:DATABASE_URL = "cole-aqui-a-DATABASE_PUBLIC_URL"; pnpm admin:criar "Seu nome" voce@exemplo.com uma-senha-forte
    ```
 
-   Isso também cadastra os 4 produtos de partida. As outras pessoas você cria pela tela **Pessoas**. Feche o terminal depois, para a variável não ficar apontando para produção.
+   Entrando no app com ele, abre o painel de empresas: crie lá cada estabelecimento com o primeiro acesso. As outras pessoas de cada empresa são criadas por ela, na tela **Pessoas**. Se o banco já tinha dados de antes do multiempresa, eles viraram a primeira empresa, com os mesmos logins. Feche o terminal depois, para a variável não ficar apontando para produção.
 
 ## 2. App na Vercel
 

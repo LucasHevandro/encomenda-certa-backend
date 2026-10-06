@@ -1,23 +1,36 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, integer, pgSequence, pgTable, primaryKey, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, date, integer, pgTable, primaryKey, serial, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
-/** Uma linha só (id = 1) com o que muda de um estabelecimento para outro. Sem linha, valem os padrões. */
-export const configuracao = pgTable(
-  'configuracao',
-  {
-    id: integer('id').primaryKey().default(1),
-    nomeEstabelecimento: text('nome_estabelecimento').notNull(),
-    corPrincipal: text('cor_principal').notNull(),
-    logoUrl: text('logo_url'),
-    enderecoRetirada: text('endereco_retirada'),
-    diasDeVenda: integer('dias_de_venda').array().notNull(),
-    limiteAtencao: integer('limite_atencao').notNull(),
-    formasDePagamento: text('formas_de_pagamento').array().notNull(),
-    mensagemWhatsapp: text('mensagem_whatsapp').notNull(),
-    atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [check('configuracao_uma_linha', sql`${t.id} = 1`)],
-);
+/** Cada estabelecimento que usa o sistema. Desativada, ninguém dela consegue entrar. */
+export const empresa = pgTable('empresa', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nome: text('nome').notNull(),
+  ativa: boolean('ativa').notNull().default(true),
+  /** Próximo número de pedido (#0001, #0002…), separado por empresa. */
+  proximoPedido: integer('proximo_pedido').notNull().default(1),
+  criadaEm: timestamp('criada_em', { withTimezone: true }).notNull().defaultNow(),
+});
+
+const daEmpresa = () =>
+  uuid('empresa_id')
+    .notNull()
+    .references(() => empresa.id);
+
+/** Uma linha por empresa com o que muda de um estabelecimento para outro. Sem linha, valem os padrões. */
+export const configuracao = pgTable('configuracao', {
+  empresaId: uuid('empresa_id')
+    .primaryKey()
+    .references(() => empresa.id),
+  nomeEstabelecimento: text('nome_estabelecimento').notNull(),
+  corPrincipal: text('cor_principal').notNull(),
+  logoUrl: text('logo_url'),
+  enderecoRetirada: text('endereco_retirada'),
+  diasDeVenda: integer('dias_de_venda').array().notNull(),
+  limiteAtencao: integer('limite_atencao').notNull(),
+  formasDePagamento: text('formas_de_pagamento').array().notNull(),
+  mensagemWhatsapp: text('mensagem_whatsapp').notNull(),
+  atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * Banco do Expresso café. O dia de venda é o centro: pedidos, produção, lista de espera
@@ -26,6 +39,8 @@ export const configuracao = pgTable(
 
 export const usuario = pgTable('usuario', {
   id: uuid('id').primaryKey().defaultRandom(),
+  /** Sem empresa: administrador do sistema, que só usa o painel de empresas. */
+  empresaId: uuid('empresa_id').references(() => empresa.id),
   nome: text('nome').notNull(),
   email: text('email').notNull().unique(),
   senhaHash: text('senha_hash').notNull(),
@@ -36,6 +51,7 @@ export const produto = pgTable(
   'produto',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    empresaId: daEmpresa(),
     nome: text('nome').notNull(),
     precoAtual: integer('preco_atual').notNull(),
     ativo: boolean('ativo').notNull().default(true),
@@ -47,13 +63,16 @@ export const diaVenda = pgTable(
   'dia_venda',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    data: date('data', { mode: 'string' }).notNull().unique(),
-    status: text('status', { enum: ['aberto', 'encerrado'] }).notNull().default('aberto'),
+    empresaId: daEmpresa(),
+    data: date('data', { mode: 'string' }).notNull(),
+    status: text('status', { enum: ['aberto', 'encerrado'] })
+      .notNull()
+      .default('aberto'),
     fechadoEm: timestamp('fechado_em', { withTimezone: true }),
     /** Gravado ao fechar: soma dos pedidos não cancelados, retirados ou não. */
     faturamento: integer('faturamento'),
   },
-  (t) => [check('dia_venda_status', sql`${t.status} in ('aberto', 'encerrado')`)],
+  (t) => [unique('dia_venda_empresa_data').on(t.empresaId, t.data), check('dia_venda_status', sql`${t.status} in ('aberto', 'encerrado')`)],
 );
 
 /** A linha travada (FOR UPDATE) em toda reserva: chave (dia, produto). */
@@ -87,24 +106,25 @@ export const producaoAlteracao = pgTable('producao_alteracao', {
   em: timestamp('em', { withTimezone: true }).notNull(),
 });
 
-export const cliente = pgTable('cliente', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  nome: text('nome').notNull(),
-  /** Opcional e único: é como o balcão reconhece quem já comprou. */
-  telefone: text('telefone').unique(),
-});
-
-/** O número #0258 segue crescendo entre os dias. */
-export const pedidoNumero = pgSequence('pedido_numero_seq', { startWith: 1 });
+export const cliente = pgTable(
+  'cliente',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    empresaId: daEmpresa(),
+    nome: text('nome').notNull(),
+    /** Opcional e único na empresa: é como o balcão reconhece quem já comprou. */
+    telefone: text('telefone'),
+  },
+  (t) => [unique('cliente_empresa_telefone').on(t.empresaId, t.telefone)],
+);
 
 export const pedido = pgTable(
   'pedido',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    numero: integer('numero')
-      .notNull()
-      .unique()
-      .default(sql`nextval('pedido_numero_seq')`),
+    empresaId: daEmpresa(),
+    /** O número #0258 segue crescendo entre os dias, separado por empresa (empresa.proximo_pedido). */
+    numero: integer('numero').notNull(),
     diaId: uuid('dia_id')
       .notNull()
       .references(() => diaVenda.id),
@@ -114,7 +134,9 @@ export const pedido = pgTable(
     retirada: text('retirada', { enum: ['reservado', 'retirado', 'cancelado'] })
       .notNull()
       .default('reservado'),
-    pagamento: text('pagamento', { enum: ['pendente', 'pix', 'dinheiro', 'cartao'] })
+    pagamento: text('pagamento', {
+      enum: ['pendente', 'pix', 'dinheiro', 'cartao'],
+    })
       .notNull()
       .default('pendente'),
     criadoPor: uuid('criado_por')
@@ -127,6 +149,7 @@ export const pedido = pgTable(
     canceladoEm: timestamp('cancelado_em', { withTimezone: true }),
   },
   (t) => [
+    unique('pedido_empresa_numero').on(t.empresaId, t.numero),
     check('pedido_retirada', sql`${t.retirada} in ('reservado', 'retirado', 'cancelado')`),
     check('pedido_pagamento', sql`${t.pagamento} in ('pendente', 'pix', 'dinheiro', 'cartao')`),
   ],
@@ -152,6 +175,7 @@ export const listaEspera = pgTable(
   'lista_espera',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    empresaId: daEmpresa(),
     diaId: uuid('dia_id')
       .notNull()
       .references(() => diaVenda.id),

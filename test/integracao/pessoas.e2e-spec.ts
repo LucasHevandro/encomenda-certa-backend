@@ -14,7 +14,7 @@ describe('pessoas, quem fez e reativação', () => {
 
   it('cria outra pessoa, que entra e troca a própria senha', async () => {
     const { body: nova } = await amb.logado.post('/usuarios').send({ nome: 'Maria', email: 'Maria@Expressocafe.com', senha: 'senha-da-maria' }).expect(201);
-    expect(nova).toEqual({ id: expect.any(String), nome: 'Maria', email: 'maria@expressocafe.com' });
+    expect(nova).toEqual({ id: expect.any(String), nome: 'Maria', email: 'maria@expressocafe.com', administrador: false });
     await amb.logado.post('/usuarios').send({ nome: 'Outra', email: 'maria@expressocafe.com', senha: 'qualquer-senha' }).expect(409);
     await amb.logado.post('/usuarios').send({ nome: 'Curta', email: 'curta@expressocafe.com', senha: '123' }).expect(422);
     const { body: lista } = await amb.logado.get('/usuarios').expect(200);

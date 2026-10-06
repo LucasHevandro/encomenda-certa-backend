@@ -7,7 +7,7 @@ import { migrar } from '../../src/adapters/saida/postgres/migrar.js';
 import { UnidadeDeTrabalhoDrizzle } from '../../src/adapters/saida/postgres/UnidadeDeTrabalhoDrizzle.js';
 import { HashScrypt } from '../../src/adapters/saida/servicos.js';
 import { AppModule } from '../../src/app.module.js';
-import { Acesso } from '../../src/application/casos-de-uso/cadastros/Cadastros.js';
+import { Empresas } from '../../src/application/casos-de-uso/cadastros/Cadastros.js';
 import type { UnidadeDeTrabalho } from '../../src/application/portas/servicos.js';
 import { lerEnv } from '../../src/config/env.js';
 import { prepararHttp } from '../../src/config/http.js';
@@ -18,8 +18,11 @@ export const URL_TESTE = process.env.DATABASE_URL_TESTE ?? 'postgres://expresso:
 export interface Ambiente {
   app: INestApplication;
   uow: UnidadeDeTrabalhoDrizzle;
-  /** Agente com o cookie de sessão de uma pessoa logada. */
+  /** Agente com o cookie de sessão de uma pessoa logada na empresa de teste. */
   logado: ReturnType<typeof request.agent>;
+  /** Agente do administrador do sistema (painel de empresas). */
+  admin: ReturnType<typeof request.agent>;
+  empresaId: string;
   encerrar(): Promise<void>;
 }
 
@@ -52,7 +55,9 @@ export async function subirAmbiente({ janelaDeCorridaMs = 0 } = {}): Promise<Amb
   const uow = UnidadeDeTrabalhoDrizzle.conectar(URL_TESTE);
   await uow.db.execute(sql`drop schema if exists public cascade; drop schema if exists drizzle cascade; create schema public;`);
   await migrar(uow.db);
-  await new Acesso(uow, new HashScrypt()).criarUsuario('Lusca', 'lusca@expressocafe.com', 'senha-forte-123');
+  const empresas = new Empresas(uow, new HashScrypt());
+  await empresas.criarAdministrador('Admin', 'admin@sistema.com', 'senha-forte-123');
+  const { empresa } = await empresas.criar({ nome: 'Expresso café', usuario: { nome: 'Lusca', email: 'lusca@expressocafe.com', senha: 'senha-forte-123' } });
 
   const usada = janelaDeCorridaMs > 0 ? comJanelaDeCorrida(uow, janelaDeCorridaMs) : uow;
   const modulo = await Test.createTestingModule({ imports: [AppModule.configurar(env, usada)] }).compile();
@@ -63,11 +68,15 @@ export async function subirAmbiente({ janelaDeCorridaMs = 0 } = {}): Promise<Amb
 
   const logado = request.agent(app.getHttpServer());
   await logado.post('/sessao').send({ email: 'lusca@expressocafe.com', senha: 'senha-forte-123' }).expect(200);
+  const admin = request.agent(app.getHttpServer());
+  await admin.post('/sessao').send({ email: 'admin@sistema.com', senha: 'senha-forte-123' }).expect(200);
 
   return {
     app,
     uow,
     logado,
+    admin,
+    empresaId: empresa.id,
     async encerrar() {
       await app.close();
       await uow.encerrar();

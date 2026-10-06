@@ -29,6 +29,8 @@ export const esquemas = {
     mensagemWhatsapp: z.string(),
   }),
   novoUsuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }),
+  novaEmpresa: z.object({ nome: z.string(), usuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }) }),
+  mudarEmpresa: z.object({ ativa: z.boolean() }),
   mudarSenha: z.object({ senhaAtual: z.string(), novaSenha: z.string().max(200) }),
   novoPedido: z.object({ cliente, itens }),
   editarPedido: z.object({ itens }),

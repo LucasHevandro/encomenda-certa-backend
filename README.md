@@ -8,11 +8,11 @@ API do Expresso café: NestJS, Drizzle e PostgreSQL, em arquitetura hexagonal. A
 pnpm install
 cp .env.example .env        # e troque o SESSAO_SEGREDO
 pnpm db:subir               # PostgreSQL no Docker (banco "expresso" e "expresso_teste")
-pnpm usuario:criar "Seu nome" voce@exemplo.com uma-senha-forte
+pnpm admin:criar "Seu nome" voce@exemplo.com uma-senha-forte
 pnpm start:dev              # http://localhost:3333
 ```
 
-As migrações rodam sozinhas quando a API sobe. O `usuario:criar` também cadastra os produtos de partida num banco vazio (não há cadastro de pessoas pela tela).
+As migrações rodam sozinhas quando a API sobe. O `admin:criar` cria o administrador do sistema: entrando com ele, o app abre o painel de empresas, onde você cria cada estabelecimento com o primeiro acesso e ativa ou desativa. Cada empresa só enxerga os próprios dados; as outras pessoas de uma empresa são criadas por ela mesma, na tela Pessoas.
 
 No front, coloque `NEXT_PUBLIC_API_URL=http://localhost:3333` no `.env.local`.
 

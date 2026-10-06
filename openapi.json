@@ -117,12 +117,64 @@
           },
           "email": {
             "type": "string"
+          },
+          "administrador": {
+            "type": "boolean",
+            "description": "Administrador do sistema: só usa o painel de empresas"
           }
         },
         "required": [
           "id",
           "nome",
-          "email"
+          "email",
+          "administrador"
+        ],
+        "additionalProperties": false
+      },
+      "Empresa": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "ativa": {
+            "type": "boolean"
+          },
+          "criadaEm": {
+            "type": "string"
+          },
+          "usuarios": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Pessoas com acesso"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "ativa",
+          "criadaEm",
+          "usuarios"
+        ],
+        "additionalProperties": false
+      },
+      "EmpresaCriada": {
+        "type": "object",
+        "properties": {
+          "empresa": {
+            "$ref": "#/components/schemas/Empresa"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        },
+        "required": [
+          "empresa",
+          "usuario"
         ],
         "additionalProperties": false
       },
@@ -1178,6 +1230,52 @@
           "status"
         ],
         "additionalProperties": false
+      },
+      "NovaEmpresa": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "senha": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "nome",
+              "email",
+              "senha"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "nome",
+          "usuario"
+        ],
+        "additionalProperties": false
+      },
+      "MudarEmpresa": {
+        "type": "object",
+        "properties": {
+          "ativa": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ativa"
+        ],
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -1308,7 +1406,7 @@
     },
     "/configuracao": {
       "get": {
-        "summary": "Configurações do estabelecimento",
+        "summary": "Configurações do estabelecimento (sem login, os padrões)",
         "security": [],
         "responses": {
           "200": {
@@ -2433,6 +2531,118 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EntradaEspera"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/empresas": {
+      "get": {
+        "summary": "Empresas (administrador)",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Empresa"
+                  }
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Criar empresa com o primeiro acesso (administrador)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaEmpresa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaCriada"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Erro com a mensagem para o balcão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/empresas/{id}": {
+      "patch": {
+        "summary": "Ativar ou desativar empresa (administrador)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MudarEmpresa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Empresa"
                 }
               }
             }
