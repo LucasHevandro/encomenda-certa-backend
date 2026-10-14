@@ -147,6 +147,9 @@ export class Espera {
 
 /** Login por e-mail e senha; um usuário por pessoa, todos da empresa com as mesmas permissões. */
 export class Acesso {
+  /** Hash descartável: e-mail inexistente também paga a conferência da senha. */
+  private hashFicticio?: Promise<string>;
+
   constructor(
     private readonly uow: UnidadeDeTrabalho,
     private readonly hash: HashDeSenha,
@@ -154,7 +157,11 @@ export class Acesso {
 
   async entrar(email: string, senha: string): Promise<Usuario> {
     const usuario = await this.uow.leitura.usuarios.porEmail(email.trim().toLowerCase());
-    // Mesma resposta para e-mail inexistente e senha errada.
+    // Mesma resposta e mesmo tempo para e-mail inexistente e senha errada: o tempo não revela quem tem conta.
+    if (!usuario) {
+      this.hashFicticio ??= this.hash.gerar('senha-que-ninguem-usa');
+      await this.hash.conferir(senha, await this.hashFicticio);
+    }
     if (!usuario || !(await this.hash.conferir(senha, usuario.senhaHash))) {
       throw new ErroDeDominio('login-invalido', 'E-mail ou senha incorretos.');
     }
