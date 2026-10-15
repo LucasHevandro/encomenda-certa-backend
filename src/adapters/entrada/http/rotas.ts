@@ -8,6 +8,8 @@ import { Producao } from '../../../application/casos-de-uso/producao/Producao.js
 import type { Usuario } from '../../../application/portas/repositorios.js';
 import { centavos } from '../../../domain/compartilhado/Dinheiro.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
+import { PaginaPublica } from '../../../application/casos-de-uso/online/PaginaPublica.js';
+import { LimiteDeFrequencia } from './limiteDeFrequencia.js';
 import { LimiteDeTentativas } from './limiteDeTentativas.js';
 import { PublicadorSSE } from '../../saida/servicos.js';
 import { gerarOpenApi } from './contrato.js';
@@ -283,6 +285,49 @@ export class CadastrosRotas {
   @Get('saude')
   saude() {
     return { ok: true };
+  }
+}
+
+/**
+ * Página pública em que os clientes reservam, sem login. A empresa vem do endereço da
+ * loja ou do código secreto do pedido; pedidos e entradas na espera têm freio por endereço de acesso.
+ */
+@Publico()
+@Controller('publico')
+export class PublicoRotas {
+  constructor(
+    @Inject(PaginaPublica) private readonly pagina: PaginaPublica,
+    @Inject(LimiteDeFrequencia) private readonly limite: LimiteDeFrequencia,
+  ) {}
+
+  @Get('lojas/:id')
+  loja(@Param('id') endereco: string) {
+    return this.pagina.loja(endereco);
+  }
+
+  @Post('lojas/:id/pedidos')
+  reservar(@Param('id') endereco: string, @Body() corpo: unknown, @Req() requisicao: Request) {
+    const { diaId, cliente, itens } = validar(esquemas.pedidoOnline, corpo);
+    this.limite.registrar(`pedido|${requisicao.ip ?? ''}`);
+    return this.pagina.reservar(endereco, { diaId, cliente, itens });
+  }
+
+  @Post('lojas/:id/espera')
+  entrarNaEspera(@Param('id') endereco: string, @Body() corpo: unknown, @Req() requisicao: Request) {
+    const { diaId, produtoId, cliente, quantidade } = validar(esquemas.esperaOnline, corpo);
+    this.limite.registrar(`espera|${requisicao.ip ?? ''}`);
+    return this.pagina.entrarNaEspera(endereco, { diaId, produtoId, cliente, quantidade });
+  }
+
+  @Get('pedidos/:id')
+  acompanhar(@Param('id') codigo: string) {
+    return this.pagina.acompanhar(codigo);
+  }
+
+  @Post('pedidos/:id/cancelamento')
+  @HttpCode(200)
+  cancelar(@Param('id') codigo: string) {
+    return this.pagina.cancelar(codigo);
   }
 }
 

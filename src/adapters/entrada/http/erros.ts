@@ -21,6 +21,11 @@ const STATUS: Record<string, number> = {
   'senha-atual-incorreta': 422,
   'muitas-tentativas': 429,
   'pagamento-nao-aceito': 422,
+  'endereco-em-uso': 409,
+  'pedidos-online-fechados': 409,
+  'pedidos-online-encerrados': 409,
+  'cancelamento-encerrado': 409,
+  'muitos-pedidos': 429,
 };
 
 /**

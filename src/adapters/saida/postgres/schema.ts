@@ -29,6 +29,12 @@ export const configuracao = pgTable('configuracao', {
   limiteAtencao: integer('limite_atencao').notNull(),
   formasDePagamento: text('formas_de_pagamento').array().notNull(),
   mensagemWhatsapp: text('mensagem_whatsapp').notNull(),
+  /** Página pública de pedidos: ligada ou não, endereço único no sistema e regras. */
+  pedidosOnline: boolean('pedidos_online').notNull().default(false),
+  enderecoPagina: text('endereco_pagina').unique('configuracao_endereco_pagina'),
+  encerramentoOnline: integer('encerramento_online').notNull().default(-240),
+  maximoOnline: integer('maximo_online').notNull().default(10),
+  avisoOnline: text('aviso_online'),
   atualizadoEm: timestamp('atualizado_em', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -139,10 +145,15 @@ export const pedido = pgTable(
     })
       .notNull()
       .default('pendente'),
-    criadoPor: uuid('criado_por')
+    /** Balcão (alguém da equipe) ou online (o próprio cliente, pela página pública). */
+    origem: text('origem', { enum: ['balcao', 'online'] })
       .notNull()
-      .references(() => usuario.id),
+      .default('balcao'),
+    /** Vazio no pedido online: quem reservou foi o cliente. */
+    criadoPor: uuid('criado_por').references(() => usuario.id),
     criadoEm: timestamp('criado_em', { withTimezone: true }).notNull(),
+    /** Só no pedido online: código secreto do link em que o cliente acompanha e cancela. */
+    codigoAcesso: text('codigo_acesso').unique('pedido_codigo_acesso'),
     retiradoPor: uuid('retirado_por').references(() => usuario.id),
     retiradoEm: timestamp('retirado_em', { withTimezone: true }),
     canceladoPor: uuid('cancelado_por').references(() => usuario.id),
@@ -152,6 +163,7 @@ export const pedido = pgTable(
     unique('pedido_empresa_numero').on(t.empresaId, t.numero),
     check('pedido_retirada', sql`${t.retirada} in ('reservado', 'retirado', 'cancelado')`),
     check('pedido_pagamento', sql`${t.pagamento} in ('pendente', 'pix', 'dinheiro', 'cartao')`),
+    check('pedido_origem', sql`${t.origem} in ('balcao', 'online')`),
   ],
 );
 

@@ -3,6 +3,8 @@ import { ErroDeDominio } from '../compartilhado/ErroDeDominio.js';
 
 export type Retirada = 'reservado' | 'retirado' | 'cancelado';
 export type Pagamento = 'pendente' | 'pix' | 'dinheiro' | 'cartao';
+/** Balcão: anotado pela equipe. Online: o próprio cliente reservou pela página. */
+export type Origem = 'balcao' | 'online';
 
 export interface ItemPedido {
   readonly produtoId: string;
@@ -27,6 +29,7 @@ export interface Pedido {
   /** Retirada e pagamento são independentes (os dois selos do pedido). */
   readonly retirada: Retirada;
   readonly pagamento: Pagamento;
+  readonly origem: Origem;
   /** Quem fez cada passo e quando (nome da pessoa e data ISO). */
   readonly registro?: RegistroDoPedido;
 }

@@ -71,7 +71,7 @@ export class Pedidos {
    * Confirmar reserva: trava a produção dos produtos do pedido, confere se cabe e grava.
    * Se faltar, lança QuantidadeIndisponivel com o máximo exato, que vira o "Reservar N".
    */
-  async criar(comando: NovoPedido, usuarioId: string): Promise<Pedido> {
+  async criar(comando: NovoPedido, usuarioId: string | null, codigoAcesso?: string): Promise<Pedido> {
     const itens = juntarItens(comando.itens);
     const cliente = limparCliente(comando.cliente);
     validarNovoPedido(cliente, itens);
@@ -89,6 +89,7 @@ export class Pedidos {
         itens: itens.map((i) => ({ ...i, precoUnitario: produtos.get(i.produtoId)!.preco })),
         usuarioId,
         em: this.relogio.agora(),
+        codigoAcesso,
       });
     });
 
@@ -177,7 +178,7 @@ export class Pedidos {
   }
 
   /** Cancelar só libera unidades, então não precisa checar disponibilidade; avisa a lista de espera. */
-  async cancelar(pedidoId: string, usuarioId: string): Promise<ResultadoCancelamento> {
+  async cancelar(pedidoId: string, usuarioId: string | null): Promise<ResultadoCancelamento> {
     const { pedido, resultado } = await this.uow.executar(async (r) => {
       const atual = existir(await r.pedidos.travar(pedidoId), 'Pedido');
       if (!estaAberto(atual)) throw new ErroDeDominio('pedido-fechado', 'Este pedido já foi retirado ou cancelado.');

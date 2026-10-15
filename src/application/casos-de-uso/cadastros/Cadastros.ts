@@ -2,13 +2,13 @@ import { type Dinheiro, somar } from '../../../domain/compartilhado/Dinheiro.js'
 import { type Pedido, totalDoPedido } from '../../../domain/pedido/Pedido.js';
 import { ErroDeDominio } from '../../../domain/compartilhado/ErroDeDominio.js';
 import { existir } from '../../../domain/compartilhado/naoEncontrado.js';
-import { CONFIGURACAO_PADRAO, type Configuracao, validarConfiguracao } from '../../../domain/configuracao/Configuracao.js';
+import { CONFIGURACAO_PADRAO, type Configuracao, type PedidosOnline, validarConfiguracao } from '../../../domain/configuracao/Configuracao.js';
 import { garantirAberto } from '../../../domain/dia-venda/DiaVenda.js';
 import type { EntradaEspera } from '../../../domain/lista-espera/EntradaEspera.js';
 import type { Produto } from '../../../domain/produto/Produto.js';
 import type { ClienteEncontrado, Empresa, Usuario } from '../../portas/repositorios.js';
 import type { HashDeSenha, PublicadorDeEventos, UnidadeDeTrabalho } from '../../portas/servicos.js';
-import { naEmpresa, temEmpresa } from '../../contextoDaEmpresa.js';
+import { empresaAtual, naEmpresa, temEmpresa } from '../../contextoDaEmpresa.js';
 
 /** O que muda de um estabelecimento para outro: marca, dias de venda, pagamentos, mensagem. */
 export class Configuracoes {
@@ -20,8 +20,17 @@ export class Configuracoes {
     return (await this.uow.leitura.configuracao.obter()) ?? CONFIGURACAO_PADRAO;
   }
 
-  async salvar(nova: Configuracao): Promise<Configuracao> {
-    const limpa = validarConfiguracao(nova);
+  /** Sem `pedidosOnline` (app antigo), a página pública continua como estava. */
+  async salvar(nova: Omit<Configuracao, 'pedidosOnline'> & { pedidosOnline?: PedidosOnline }): Promise<Configuracao> {
+    const pedidosOnline = nova.pedidosOnline ?? (await this.obter()).pedidosOnline;
+    const limpa = validarConfiguracao({ ...nova, pedidosOnline });
+    const endereco = limpa.pedidosOnline.endereco;
+    if (endereco) {
+      const dono = await this.uow.leitura.configuracao.porEndereco(endereco);
+      if (dono && dono.empresaId !== empresaAtual()) {
+        throw new ErroDeDominio('endereco-em-uso', 'Este endereço de página já é de outro estabelecimento. Escolha outro.');
+      }
+    }
     await this.uow.executar((r) => r.configuracao.salvar(limpa));
     return limpa;
   }

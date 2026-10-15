@@ -13,6 +13,7 @@ const pedido: Pedido = {
   ],
   retirada: 'reservado',
   pagamento: 'pendente',
+  origem: 'balcao',
 };
 
 describe('Pedido', () => {

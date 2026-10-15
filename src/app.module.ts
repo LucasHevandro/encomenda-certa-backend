@@ -1,7 +1,9 @@
 import { type DynamicModule, type FactoryProvider, type MiddlewareConsumer, Module, type NestModule, type Type } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { FiltroDeErros } from './adapters/entrada/http/erros.js';
-import { AdminRotas, CadastrosRotas, DiasRotas, PedidosRotas, SessaoRotas } from './adapters/entrada/http/rotas.js';
+import { AdminRotas, CadastrosRotas, DiasRotas, PedidosRotas, PublicoRotas, SessaoRotas } from './adapters/entrada/http/rotas.js';
+import { LimiteDeFrequencia } from './adapters/entrada/http/limiteDeFrequencia.js';
+import { PaginaPublica } from './application/casos-de-uso/online/PaginaPublica.js';
 import { LimiteDeTentativas } from './adapters/entrada/http/limiteDeTentativas.js';
 import { AbrirContexto, CookieDeSessao, ENV, GuardaDeSessao } from './adapters/entrada/http/sessao.js';
 import { HashScrypt, PublicadorSSE, RelogioDoSistema } from './adapters/saida/servicos.js';
@@ -31,7 +33,7 @@ export class AppModule implements NestModule {
     const publicador = new PublicadorSSE();
     return {
       module: AppModule,
-      controllers: [SessaoRotas, DiasRotas, PedidosRotas, CadastrosRotas, AdminRotas],
+      controllers: [SessaoRotas, DiasRotas, PedidosRotas, CadastrosRotas, PublicoRotas, AdminRotas],
       providers: [
         { provide: ENV, useValue: env },
         { provide: TOKENS.uow, useValue: uow },
@@ -48,8 +50,14 @@ export class AppModule implements NestModule {
         { provide: Configuracoes, useFactory: (u: UnidadeDeTrabalho) => new Configuracoes(u), inject: [TOKENS.uow] },
         { provide: Empresas, useFactory: (u: UnidadeDeTrabalho, h: HashDeSenha) => new Empresas(u, h), inject: [TOKENS.uow, TOKENS.hash] },
         { provide: Acesso, useFactory: (u: UnidadeDeTrabalho, h: HashDeSenha) => new Acesso(u, h), inject: [TOKENS.uow, TOKENS.hash] },
+        {
+          provide: PaginaPublica,
+          useFactory: (u: UnidadeDeTrabalho, e: PublicadorDeEventos, r: Relogio, p: Pedidos, esp: Espera) => new PaginaPublica(u, p, esp, e, r),
+          inject: [TOKENS.uow, TOKENS.eventos, TOKENS.relogio, Pedidos, Espera],
+        },
         CookieDeSessao,
         { provide: LimiteDeTentativas, useValue: new LimiteDeTentativas() },
+        { provide: LimiteDeFrequencia, useValue: new LimiteDeFrequencia() },
         { provide: APP_GUARD, useClass: GuardaDeSessao },
         { provide: APP_FILTER, useClass: FiltroDeErros },
       ],
