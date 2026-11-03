@@ -19,6 +19,57 @@ export interface Configuracao {
   readonly formasDePagamento: readonly FormaDePagamento[];
   /** Modelo da confirmação. Campos: {cliente} {numero} {itens} {total} {data} {estabelecimento} {endereco}. */
   readonly mensagemWhatsapp: string;
+  /** Página pública em que os próprios clientes reservam. */
+  readonly pedidosOnline: PedidosOnline;
+}
+
+export interface PedidosOnline {
+  /** Ligado: a página aceita pedidos. Desligado: mostra que os pedidos pelo site estão fechados. */
+  readonly ativo: boolean;
+  /** Endereço da página (/loja/expresso-cafe): letras minúsculas, números e hífen, único no sistema. */
+  readonly endereco?: string;
+  /** Até quando a página aceita pedidos e cancelamentos, em minutos a partir da meia-noite do dia de venda (-240 = véspera às 20h). */
+  readonly encerramentoMinutos: number;
+  /** Teto de unidades de cada produto em um pedido feito pela página. */
+  readonly maximoPorProduto: number;
+  /** Recado que aparece no topo da página (opcional). */
+  readonly aviso?: string;
+}
+
+/** Opções de "Receber pedidos até", em minutos a partir da meia-noite do dia de venda. */
+export const ENCERRAMENTOS_ONLINE = [-360, -240, -120, 0, 540] as const;
+
+export const PEDIDOS_ONLINE_PADRAO: PedidosOnline = { ativo: false, encerramentoMinutos: -240, maximoPorProduto: 10 };
+
+const ENDERECO_VALIDO = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
+
+/** "Expresso Café" → "expresso-cafe": sugestão de endereço a partir do nome. */
+export function sugerirEndereco(nome: string): string {
+  return nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/g, '');
+}
+
+function validarPedidosOnline(p: PedidosOnline): PedidosOnline {
+  const endereco = p.endereco?.trim().toLowerCase() || undefined;
+  if (endereco && !ENDERECO_VALIDO.test(endereco)) {
+    throw new ErroDeDominio('config-endereco', 'O endereço da página usa de 3 a 40 letras minúsculas, números e hífen.');
+  }
+  if (p.ativo && !endereco) throw new ErroDeDominio('config-endereco', 'Escolha o endereço da página para receber pedidos online.');
+  if (!ENCERRAMENTOS_ONLINE.includes(p.encerramentoMinutos as never)) {
+    throw new ErroDeDominio('config-encerramento', 'Escolha até quando a página recebe pedidos.');
+  }
+  if (!Number.isInteger(p.maximoPorProduto) || p.maximoPorProduto < 1 || p.maximoPorProduto > 99) {
+    throw new ErroDeDominio('config-maximo', 'O máximo por produto vai de 1 a 99.');
+  }
+  const aviso = p.aviso?.trim() || undefined;
+  if (aviso && aviso.length > 200) throw new ErroDeDominio('config-aviso', 'O aviso da página tem até 200 letras.');
+  return { ativo: p.ativo, endereco, encerramentoMinutos: p.encerramentoMinutos, maximoPorProduto: p.maximoPorProduto, aviso };
 }
 
 export const NOMES_DOS_DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'] as const;
@@ -44,6 +95,7 @@ export const CONFIGURACAO_PADRAO: Configuracao = {
     '',
     'Obrigado pela preferência!',
   ].join('\n'),
+  pedidosOnline: PEDIDOS_ONLINE_PADRAO,
 };
 
 /** Confere e limpa o que veio da tela; lança ErroDeDominio com a frase para quem está configurando. */
@@ -73,7 +125,17 @@ export function validarConfiguracao(c: Configuracao): Configuracao {
     limiteAtencao: c.limiteAtencao,
     formasDePagamento: formas,
     mensagemWhatsapp: mensagem,
+    pedidosOnline: validarPedidosOnline(c.pedidosOnline ?? PEDIDOS_ONLINE_PADRAO),
   };
+}
+
+/**
+ * Momento em que a página para de aceitar pedidos (e cancelamentos) de um dia de venda.
+ * O horário é o de Brasília (UTC−3, sem horário de verão desde 2019).
+ */
+export function encerramentoDoDia(dataIso: string, encerramentoMinutos: number): Date {
+  const meiaNoite = new Date(`${dataIso}T00:00:00-03:00`);
+  return new Date(meiaNoite.getTime() + encerramentoMinutos * 60_000);
 }
 
 /** "sábado ou domingo", "segunda a sexta"… para as mensagens de erro e de ajuda. */

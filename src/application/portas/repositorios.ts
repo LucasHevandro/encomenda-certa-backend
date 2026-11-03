@@ -4,7 +4,7 @@ import type { DiaVenda } from '../../domain/dia-venda/DiaVenda.js';
 import type { EstoqueDoProduto, ItemSolicitado } from '../../domain/disponibilidade/Disponibilidade.js';
 import type { FechamentoDoProduto } from '../../domain/fechamento/Fechamento.js';
 import type { EntradaEspera } from '../../domain/lista-espera/EntradaEspera.js';
-import type { ClienteDoPedido, Pagamento, Pedido, Retirada } from '../../domain/pedido/Pedido.js';
+import type { ClienteDoPedido, Origem, Pagamento, Pedido, Retirada } from '../../domain/pedido/Pedido.js';
 import type { Produto } from '../../domain/produto/Produto.js';
 
 /**
@@ -92,6 +92,7 @@ export interface ProducaoRepo {
 
 export interface FiltroPedidos {
   readonly retirada?: Retirada;
+  readonly origem?: Origem;
   readonly busca?: string;
 }
 
@@ -106,11 +107,19 @@ export interface PedidoRepo {
     diaId: string;
     clienteId: string;
     itens: readonly { produtoId: string; quantidade: number; precoUnitario: Dinheiro }[];
-    usuarioId: string;
+    /** null: pedido online, feito pelo próprio cliente. */
+    usuarioId: string | null;
     em: Date;
+    /** Só no pedido online: o código do link de acompanhamento. */
+    codigoAcesso?: string;
   }): Promise<Pedido>;
+  /** Em qualquer empresa: a página do cliente só tem o código do link. */
+  porCodigo(codigo: string): Promise<{ empresaId: string; empresaAtiva: boolean; pedidoId: string } | null>;
+  /** Pedidos online ainda reservados para o telefone no dia (limite de pedidos por cliente). */
+  reservadosOnline(diaId: string, telefone: string): Promise<number>;
   substituirItens(id: string, itens: readonly { produtoId: string; quantidade: number; precoUnitario: Dinheiro }[]): Promise<void>;
-  mudarRetirada(id: string, retirada: Retirada, usuarioId: string, em: Date): Promise<void>;
+  /** usuarioId null: o próprio cliente, pela página. */
+  mudarRetirada(id: string, retirada: Retirada, usuarioId: string | null, em: Date): Promise<void>;
   mudarPagamento(id: string, pagamento: Pagamento): Promise<void>;
 }
 
@@ -156,6 +165,8 @@ export interface ConfiguracaoRepo {
   /** null quando o estabelecimento ainda não salvou nada (valem os padrões). */
   obter(): Promise<Configuracao | null>;
   salvar(configuracao: Configuracao): Promise<void>;
+  /** Em qualquer empresa: de quem é o endereço da página pública (e se a empresa está ativa). */
+  porEndereco(endereco: string): Promise<{ empresaId: string; empresaAtiva: boolean } | null>;
 }
 
 export interface Empresa {

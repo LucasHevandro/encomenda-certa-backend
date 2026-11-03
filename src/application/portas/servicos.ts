@@ -9,7 +9,8 @@ export interface UnidadeDeTrabalho {
 
 export type EventoDoDia =
   | { readonly tipo: 'disponibilidade-mudou' }
-  | { readonly tipo: 'unidades-liberadas'; readonly produtoId: string; readonly quantidade: number };
+  | { readonly tipo: 'unidades-liberadas'; readonly produtoId: string; readonly quantidade: number }
+  | { readonly tipo: 'pedido-online'; readonly numero: number; readonly cliente: string };
 
 /** Avisa os outros aparelhos. Só é chamado depois que a transação confirmou. */
 export interface PublicadorDeEventos {

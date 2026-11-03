@@ -15,6 +15,9 @@ const id = z.string().min(1);
 const inteiro = z.number().int();
 const cliente = z.object({ nome: z.string(), telefone: z.string().optional() });
 const itens = z.array(z.object({ produtoId: id, quantidade: inteiro.min(0) })).max(50);
+/** Pela página pública: tamanhos limitados e um campo isca que só robô preenche. */
+const clienteDaPagina = z.object({ nome: z.string().max(60), telefone: z.string().max(20) });
+const isca = z.string().max(0, 'pedido recusado').optional();
 
 export const esquemas = {
   entrar: z.object({ email: z.string(), senha: z.string() }),
@@ -27,7 +30,18 @@ export const esquemas = {
     limiteAtencao: z.number().int(),
     formasDePagamento: z.array(z.enum(['pix', 'dinheiro', 'cartao'])).max(3),
     mensagemWhatsapp: z.string(),
+    pedidosOnline: z
+      .object({
+        ativo: z.boolean(),
+        endereco: z.string().max(40).optional(),
+        encerramentoMinutos: z.number().int(),
+        maximoPorProduto: z.number().int(),
+        aviso: z.string().max(200).optional(),
+      })
+      .optional(),
   }),
+  pedidoOnline: z.object({ diaId: id, cliente: clienteDaPagina, itens, site: isca }),
+  esperaOnline: z.object({ diaId: id, produtoId: id, cliente: clienteDaPagina, quantidade: inteiro.min(1), site: isca }),
   novoUsuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }),
   novaEmpresa: z.object({ nome: z.string(), usuario: z.object({ nome: z.string(), email: z.string(), senha: z.string().max(200) }) }),
   mudarEmpresa: z.object({ ativa: z.boolean() }),
@@ -41,5 +55,9 @@ export const esquemas = {
   mudarProduto: z.object({ preco: inteiro.positive().optional(), ativo: z.boolean().optional() }),
   novaEspera: z.object({ produtoId: id, cliente, quantidade: inteiro.min(1) }),
   mudarEspera: z.object({ status: z.enum(['aguardando', 'atendido', 'desistiu']) }),
-  filtroPedidos: z.object({ retirada: z.enum(['reservado', 'retirado', 'cancelado']).optional(), busca: z.string().max(100).optional() }),
+  filtroPedidos: z.object({
+    retirada: z.enum(['reservado', 'retirado', 'cancelado']).optional(),
+    origem: z.enum(['balcao', 'online']).optional(),
+    busca: z.string().max(100).optional(),
+  }),
 };

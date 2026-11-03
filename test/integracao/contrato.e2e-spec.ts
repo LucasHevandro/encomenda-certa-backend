@@ -29,7 +29,8 @@ describe('contrato da API', () => {
     await amb.encerrar();
   });
 
-  const leituras = ROTAS.filter((r) => r.metodo === 'get' && r.resposta && !r.caminho.endsWith('/eventos'));
+  // As rotas da página pública têm o próprio teste (online.e2e-spec), com loja e código de verdade.
+  const leituras = ROTAS.filter((r) => r.metodo === 'get' && r.resposta && !r.caminho.endsWith('/eventos') && !r.caminho.startsWith('/publico'));
 
   it.each(leituras.map((r) => [r.caminho, r] as const))('GET %s', async (caminho, rota) => {
     const id = caminho.startsWith('/pedidos') ? ids.pedido : caminho.startsWith('/clientes') ? ids.cliente : ids.dia;

@@ -34,8 +34,53 @@ export const Configuracao = z
     limiteAtencao: z.number().int(),
     formasDePagamento: z.array(z.enum(['pix', 'dinheiro', 'cartao'])),
     mensagemWhatsapp: z.string().describe('Campos: {cliente} {numero} {itens} {total} {data} {estabelecimento} {endereco}'),
+    pedidosOnline: z.object({
+      ativo: z.boolean(),
+      endereco: z.string().optional().describe('Endereço da página: /loja/{endereco}'),
+      encerramentoMinutos: z.number().int().describe('Prazo para pedir e cancelar, em minutos a partir da meia-noite do dia (-240 = véspera às 20h)'),
+      maximoPorProduto: z.number().int(),
+      aviso: z.string().optional(),
+    }),
   })
   .meta({ id: 'Configuracao' });
+
+export const Loja = z
+  .object({
+    nome: z.string(),
+    corPrincipal: z.string(),
+    logoUrl: z.string().optional(),
+    enderecoRetirada: z.string().optional(),
+    aviso: z.string().optional(),
+    aceitandoPedidos: z.boolean(),
+    maximoPorProduto: z.number().int(),
+    dias: z.array(
+      z.object({
+        id: z.string(),
+        data: dataDoDia,
+        encerraEm: z.string().describe('Até quando dá para pedir e cancelar (ISO)'),
+        produtos: z.array(z.object({ produtoId: z.string(), nome: z.string(), preco: centavos, disponiveis: z.number().int() })),
+      }),
+    ),
+  })
+  .meta({ id: 'Loja' });
+
+export const PedidoReservado = z
+  .object({ codigo: z.string().describe('Código secreto do link de acompanhamento'), numero: z.number().int() })
+  .meta({ id: 'PedidoReservado' });
+
+export const AcompanhamentoPedido = z
+  .object({
+    numero: z.number().int(),
+    cliente: z.string(),
+    itens: z.array(z.object({ nome: z.string(), quantidade: z.number().int(), precoUnitario: centavos })),
+    total: centavos,
+    retirada: z.enum(['reservado', 'retirado', 'cancelado']),
+    data: dataDoDia,
+    estabelecimento: z.object({ nome: z.string(), corPrincipal: z.string(), enderecoRetirada: z.string().optional(), endereco: z.string().optional() }),
+    cancelavelAte: z.string(),
+    podeCancelar: z.boolean(),
+  })
+  .meta({ id: 'AcompanhamentoPedido' });
 
 export const Usuario = z
   .object({ id: z.string(), nome: z.string(), email: z.string(), administrador: z.boolean().describe('Administrador do sistema: só usa o painel de empresas') })
@@ -85,6 +130,7 @@ export const Pedido = z
     itens: z.array(ItemPedido),
     retirada: z.enum(['reservado', 'retirado', 'cancelado']),
     pagamento: z.enum(['pendente', 'pix', 'dinheiro', 'cartao']),
+    origem: z.enum(['balcao', 'online']).describe('Online: o próprio cliente reservou pela página'),
     registro: RegistroDoPedido.optional(),
   })
   .meta({ id: 'Pedido' });
@@ -183,6 +229,8 @@ const corpos = {
   MudarEspera: esquemas.mudarEspera,
   NovaEmpresa: esquemas.novaEmpresa,
   MudarEmpresa: esquemas.mudarEmpresa,
+  PedidoOnline: esquemas.pedidoOnline,
+  EsperaOnline: esquemas.esperaOnline,
 } as const;
 // .meta() devolve uma cópia; para dar nome ao próprio esquema usado na validação, registra direto.
 for (const [id, esquema] of Object.entries(corpos)) z.globalRegistry.add(esquema, { id });
@@ -218,14 +266,42 @@ export const ROTAS: Rota[] = [
   { metodo: 'get', caminho: '/dias/relatorio', resumo: 'Fotos dos últimos dias fechados', resposta: z.array(DiaFechado), query: { dias: 'Quantos dias (1 a 26, padrão 8)' } },
   { metodo: 'get', caminho: '/dias/{id}/painel', resumo: 'Início do dia', resposta: PainelDoDia },
   { metodo: 'post', caminho: '/dias/{id}/fechamento', resumo: 'Fechar o dia (somente leitura depois)' },
-  { metodo: 'get', caminho: '/dias/{id}/pedidos', resumo: 'Pedidos do dia', resposta: z.array(Pedido), query: { retirada: 'reservado | retirado | cancelado', busca: 'Nome, telefone ou número' } },
+  { metodo: 'get', caminho: '/dias/{id}/pedidos', resumo: 'Pedidos do dia', resposta: z.array(Pedido), query: { retirada: 'reservado | retirado | cancelado', origem: 'balcao | online', busca: 'Nome, telefone ou número' } },
   { metodo: 'post', caminho: '/dias/{id}/pedidos', resumo: 'Confirmar reserva (409 com o máximo se não couber)', corpo: esquemas.novoPedido, resposta: Pedido, status: 201 },
   { metodo: 'get', caminho: '/dias/{id}/producao', resumo: 'Produção, reservados e vendidos', resposta: z.array(EstoqueDoProduto) },
   { metodo: 'put', caminho: '/dias/{id}/producao', resumo: 'Salvar produção (409 abaixo do reservado)', corpo: esquemas.producao },
   { metodo: 'get', caminho: '/dias/{id}/producao/historico', resumo: 'Quem mudou a produção', resposta: z.array(AlteracaoProducao) },
   { metodo: 'get', caminho: '/dias/{id}/espera', resumo: 'Lista de espera do dia', resposta: z.array(EntradaEspera) },
   { metodo: 'post', caminho: '/dias/{id}/espera', resumo: 'Entrar na lista de espera', corpo: esquemas.novaEspera, resposta: EntradaEspera, status: 201 },
-  { metodo: 'get', caminho: '/dias/{id}/eventos', resumo: 'Tempo real (text/event-stream): disponibilidade-mudou, unidades-liberadas' },
+  { metodo: 'get', caminho: '/dias/{id}/eventos', resumo: 'Tempo real (text/event-stream): disponibilidade-mudou, unidades-liberadas, pedido-online' },
+  { metodo: 'get', caminho: '/publico/lojas/{id}', resumo: 'Página pública da loja ({id} = endereço da página)', resposta: Loja, publica: true },
+  {
+    metodo: 'post',
+    caminho: '/publico/lojas/{id}/pedidos',
+    resumo: 'Reserva feita pelo cliente (409 com o máximo se não couber)',
+    corpo: esquemas.pedidoOnline,
+    resposta: PedidoReservado,
+    status: 201,
+    publica: true,
+  },
+  {
+    metodo: 'post',
+    caminho: '/publico/lojas/{id}/espera',
+    resumo: 'Cliente entra na lista de espera pela página',
+    corpo: esquemas.esperaOnline,
+    resposta: EntradaEspera,
+    status: 201,
+    publica: true,
+  },
+  { metodo: 'get', caminho: '/publico/pedidos/{id}', resumo: 'Pedido visto pelo link do cliente ({id} = código)', resposta: AcompanhamentoPedido, publica: true },
+  {
+    metodo: 'post',
+    caminho: '/publico/pedidos/{id}/cancelamento',
+    resumo: 'Cliente cancela pelo link, até o prazo',
+    resposta: AcompanhamentoPedido,
+    status: 200,
+    publica: true,
+  },
   { metodo: 'get', caminho: '/pedidos/{id}', resumo: 'Detalhe do pedido', resposta: Pedido },
   { metodo: 'patch', caminho: '/pedidos/{id}', resumo: 'Editar itens (409 se não couber)', corpo: esquemas.editarPedido, resposta: Pedido },
   { metodo: 'post', caminho: '/pedidos/{id}/retirada', resumo: 'Marcar como retirado', resposta: Pedido, status: 200 },

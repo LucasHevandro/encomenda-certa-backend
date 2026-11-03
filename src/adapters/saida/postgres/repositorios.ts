@@ -321,6 +321,7 @@ class PedidosPg implements PedidoRepo {
     if (!ehUuid(diaId)) return [];
     const condicoes = [eq(t.pedido.diaId, diaId), eq(t.pedido.empresaId, empresaAtual())];
     if (filtro.retirada) condicoes.push(eq(t.pedido.retirada, filtro.retirada));
+    if (filtro.origem) condicoes.push(eq(t.pedido.origem, filtro.origem));
     const busca = filtro.busca?.trim();
     if (busca) {
       const digitos = busca.replace(/\D/g, '');
@@ -376,8 +377,9 @@ class PedidosPg implements PedidoRepo {
       quantidade: number;
       precoUnitario: Dinheiro;
     }[];
-    usuarioId: string;
+    usuarioId: string | null;
     em: Date;
+    codigoAcesso?: string;
   }) {
     // Número da empresa: o UPDATE trava a linha da empresa até o fim da transação, então dois pedidos nunca pegam o mesmo.
     const empresaId = empresaAtual();
@@ -393,12 +395,41 @@ class PedidosPg implements PedidoRepo {
         numero,
         diaId: novo.diaId,
         clienteId: novo.clienteId,
+        origem: novo.codigoAcesso ? 'online' : 'balcao',
         criadoPor: novo.usuarioId,
         criadoEm: novo.em,
+        codigoAcesso: novo.codigoAcesso ?? null,
       })
       .returning({ id: t.pedido.id });
     await this.db.insert(t.pedidoItem).values(novo.itens.map((i) => ({ ...i, pedidoId: p.id })));
     return (await this.obter(p.id))!;
+  }
+
+  async porCodigo(codigo: string) {
+    const [p] = await this.db
+      .select({ empresaId: t.pedido.empresaId, empresaAtiva: t.empresa.ativa, pedidoId: t.pedido.id })
+      .from(t.pedido)
+      .innerJoin(t.empresa, eq(t.empresa.id, t.pedido.empresaId))
+      .where(eq(t.pedido.codigoAcesso, codigo));
+    return p ?? null;
+  }
+
+  async reservadosOnline(diaId: string, telefone: string) {
+    if (!ehUuid(diaId)) return 0;
+    const [linha] = await this.db
+      .select({ total: sql<string>`count(*)` })
+      .from(t.pedido)
+      .innerJoin(t.cliente, eq(t.cliente.id, t.pedido.clienteId))
+      .where(
+        and(
+          eq(t.pedido.diaId, diaId),
+          eq(t.pedido.empresaId, empresaAtual()),
+          eq(t.pedido.origem, 'online'),
+          eq(t.pedido.retirada, 'reservado'),
+          eq(t.cliente.telefone, telefone),
+        ),
+      );
+    return Number(linha.total);
   }
 
   async substituirItens(
@@ -413,7 +444,7 @@ class PedidosPg implements PedidoRepo {
     if (itens.length) await this.db.insert(t.pedidoItem).values(itens.map((i) => ({ ...i, pedidoId: id })));
   }
 
-  async mudarRetirada(id: string, retirada: Retirada, usuarioId: string, em: Date) {
+  async mudarRetirada(id: string, retirada: Retirada, usuarioId: string | null, em: Date) {
     // Voltar para "reservado" (reativar) apaga o registro do cancelamento.
     const quem =
       retirada === 'retirado'
@@ -478,12 +509,14 @@ class PedidosPg implements PedidoRepo {
         })),
       retirada: pedido.retirada,
       pagamento: pedido.pagamento,
+      origem: pedido.origem,
       registro: {
-        reservadoPor: nome(pedido.criadoPor),
+        // Sem pessoa da equipe: no pedido online foi o próprio cliente.
+        reservadoPor: pedido.origem === 'online' ? 'o cliente, pela página' : nome(pedido.criadoPor),
         reservadoEm: data(pedido.criadoEm),
         retiradoPor: nome(pedido.retiradoPor),
         retiradoEm: data(pedido.retiradoEm),
-        canceladoPor: nome(pedido.canceladoPor),
+        canceladoPor: pedido.canceladoEm && !pedido.canceladoPor ? 'o cliente, pela página' : nome(pedido.canceladoPor),
         canceladoEm: data(pedido.canceladoEm),
       },
     }));
@@ -700,7 +733,23 @@ class ConfiguracaoPg implements ConfiguracaoRepo {
       limiteAtencao: c.limiteAtencao,
       formasDePagamento: c.formasDePagamento as FormaDePagamento[],
       mensagemWhatsapp: c.mensagemWhatsapp,
+      pedidosOnline: {
+        ativo: c.pedidosOnline,
+        ...(c.enderecoPagina && { endereco: c.enderecoPagina }),
+        encerramentoMinutos: c.encerramentoOnline,
+        maximoPorProduto: c.maximoOnline,
+        ...(c.avisoOnline && { aviso: c.avisoOnline }),
+      },
     };
+  }
+
+  async porEndereco(endereco: string) {
+    const [linha] = await this.db
+      .select({ empresaId: t.configuracao.empresaId, empresaAtiva: t.empresa.ativa })
+      .from(t.configuracao)
+      .innerJoin(t.empresa, eq(t.empresa.id, t.configuracao.empresaId))
+      .where(eq(t.configuracao.enderecoPagina, endereco));
+    return linha ?? null;
   }
 
   async salvar(c: Configuracao) {
@@ -713,6 +762,11 @@ class ConfiguracaoPg implements ConfiguracaoRepo {
       limiteAtencao: c.limiteAtencao,
       formasDePagamento: [...c.formasDePagamento],
       mensagemWhatsapp: c.mensagemWhatsapp,
+      pedidosOnline: c.pedidosOnline.ativo,
+      enderecoPagina: c.pedidosOnline.endereco ?? null,
+      encerramentoOnline: c.pedidosOnline.encerramentoMinutos,
+      maximoOnline: c.pedidosOnline.maximoPorProduto,
+      avisoOnline: c.pedidosOnline.aviso ?? null,
       atualizadoEm: new Date(),
     };
     await this.db

@@ -11,6 +11,7 @@ const pedido = (numero: number, quantidade: number, retirada: Pedido['retirada']
   itens: [item(quantidade)],
   retirada,
   pagamento: 'pendente',
+  origem: 'balcao',
 });
 
 describe('calcularFechamento', () => {
